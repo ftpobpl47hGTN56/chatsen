@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
+import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
 
 /// Перевод строки интерфейса: tr('English', 'Русский').
 /// Обе версии лежат рядом в коде — удобно править и работает с интерполяцией ($login и т.п.).
@@ -32,10 +33,13 @@ class UserPrefs extends ChangeNotifier {
 
   // ---------- производительность ----------
 
-  /// Сколько последних сообщений рисовать в чате (остальные хранятся для поиска, но не рендерятся).
+  /// Максимум сообщений на канал: столько рисуется И хранится. Лишние (самые старые)
+  /// удаляются автоматически — это и есть автоочистка.
   int get renderLimit => (_mod?.get('renderLimit') as int?) ?? 300;
   Future<void> setRenderLimit(int v) async {
-    await _mod?.put('renderLimit', v.clamp(20, 1000));
+    final n = v.clamp(20, 1000);
+    await _mod?.put('renderLimit', n);
+    twitch.ircMaxMessages = n;
     notifyListeners();
   }
 

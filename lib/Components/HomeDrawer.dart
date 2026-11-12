@@ -192,12 +192,17 @@ class _ModToolsRowState extends State<_ModToolsRow> {
     super.dispose();
   }
 
-  void _applyLimit(String v) {
+  Future<void> _applyLimit(String v) async {
     final n = int.tryParse(v.trim());
     if (n == null) return;
-    UserPrefs.instance.setRenderLimit(n);
+    await UserPrefs.instance.setRenderLimit(n);
     limitCtrl.text = '${UserPrefs.instance.renderLimit}';
-    setState(() {});
+    // сразу подрезать уже накопленное во всех открытых чатах
+    for (final ch in widget.channel.client?.channels ?? [widget.channel]) {
+      twitch.ircTrim(ch.messages);
+    }
+    UserPrefs.instance.bump();
+    if (mounted) setState(() {});
   }
 
   void _clean() {
@@ -228,7 +233,7 @@ class _ModToolsRowState extends State<_ModToolsRow> {
               const Spacer(),
               // лимит рендера
               Tooltip(
-                message: tr('How many recent messages to render (20–1000). Fewer = smoother.', 'Сколько последних сообщений рисовать (20–1000). Меньше — плавнее.'),
+                message: tr('Max messages per chat (20–1000). Older ones are removed automatically. Fewer = smoother.', 'Максимум сообщений в чате (20–1000). Старые удаляются автоматически. Меньше — плавнее.'),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

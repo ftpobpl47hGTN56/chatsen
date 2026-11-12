@@ -13,6 +13,14 @@ import '/WebSockets/AbstractWebSocket.dart';
 /// DearKing mod: перевод системных сообщений. Приложение подменяет на свой tr() в main().
 String Function(String en, String ru) ircTr = (en, ru) => en;
 
+/// DearKing mod: сколько сообщений хранить на канал (автоочистка). Задаётся из приложения.
+int ircMaxMessages = 1000;
+
+/// Удалить самые старые сообщения сверх лимита.
+void ircTrim(List list) {
+  if (list.length > ircMaxMessages) list.removeRange(0, list.length - ircMaxMessages);
+}
+
 /// «8 мин 8 с» / «8m 8s» вместо «0:08:08.000000».
 String ircDuration(Duration d) {
   final parts = <String>[];
@@ -369,7 +377,7 @@ class Channel {
       );
 
       messages.add(chatMessage);
-      if (messages.length > 1000) messages.removeRange(0, messages.length - 1000);
+      ircTrim(messages);
       client!.listeners.forEach((listener) => listener.onHistoryLoaded(this));
       return;
     }
@@ -416,7 +424,7 @@ class Channel {
       }
 
       if (messages.none((element) => element.id == chatMessage.id)) messages.add(chatMessage);
-      if (messages.length > 1000) messages.removeRange(0, messages.length - 1000);
+      ircTrim(messages);
     }
 
     client!.listeners.forEach((listener) => listener.onHistoryLoaded(this));
@@ -639,6 +647,7 @@ class Channel {
       );
 
       messages.add(chatMessage);
+      ircTrim(messages);
       client!.listeners.forEach((listener) => listener.onWhisper(this, chatMessage));
     } else {
       var lastMessageByTransmitter = messages.lastWhereOrNull((element) => element.user?.id == transmitter!.credentials!.id);
@@ -849,7 +858,7 @@ class Connection {
           client!.listeners.forEach((listener) => listener.onMessage(channel, chatMessage));
 
           channel?.messages.add(chatMessage);
-          if ((channel?.messages.length ?? 0) > 1000) channel?.messages.removeRange(0, (channel.messages.length) - 1000);
+          if (channel != null) ircTrim(channel.messages);
         } catch (e) {}
         break;
       case 'PRIVMSG':
@@ -878,7 +887,7 @@ class Connection {
         client!.listeners.forEach((listener) => listener.onMessage(channel, chatMessage));
 
         channel?.messages.add(chatMessage);
-        if ((channel?.messages.length ?? 0) > 1000) channel?.messages.removeRange(0, (channel.messages.length) - 1000);
+        if (channel != null) ircTrim(channel.messages);
         break;
       case 'WHISPER':
         if (!transmission) break;
@@ -904,6 +913,7 @@ class Connection {
         );
 
         channel.messages.add(chatMessage);
+        ircTrim(channel.messages);
         client!.listeners.forEach((listener) => listener.onWhisper(channel, chatMessage));
         break;
 
@@ -923,7 +933,7 @@ class Connection {
           client!.listeners.forEach((listener) => listener.onMessage(channel, chatMessage));
 
           channel?.messages.add(chatMessage);
-          if ((channel?.messages.length ?? 0) > 1000) channel?.messages.removeRange(0, (channel.messages.length) - 1000);
+          if (channel != null) ircTrim(channel.messages);
         } catch (e) {}
         break;
       case 'CLEARCHAT':
@@ -956,7 +966,7 @@ class Connection {
           client!.listeners.forEach((listener) => listener.onMessage(channel, chatMessage));
 
           channel?.messages.add(chatMessage);
-          if ((channel?.messages.length ?? 0) > 1000) channel?.messages.removeRange(0, (channel.messages.length) - 1000);
+          if (channel != null) ircTrim(channel.messages);
         } catch (e) {}
         break;
       case 'USERNOTICE':
@@ -991,7 +1001,7 @@ class Connection {
           client!.listeners.forEach((listener) => listener.onMessage(channel, chatMessage));
 
           channel?.messages.add(chatMessage);
-          if ((channel?.messages.length ?? 0) > 1000) channel?.messages.removeRange(0, (channel.messages.length) - 1000);
+          if (channel != null) ircTrim(channel.messages);
         } catch (e) {}
         break;
     }

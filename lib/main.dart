@@ -62,6 +62,7 @@ Future<void> appRunner() async {
   var accountsBox = await Hive.openBox('Accounts');
   await UserPrefs.instance.init(); // игнор + локальные имена
   twitch.ircTr = tr; // системные сообщения чата на выбранном языке
+  twitch.ircMaxMessages = UserPrefs.instance.renderLimit; // автоочистка: столько сообщений хранится на канал
 
   // Backup all data to SharedPreferences on launch
   try {
