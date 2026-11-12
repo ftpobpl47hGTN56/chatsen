@@ -26,7 +26,7 @@ class Backup {
 
   static const _dir = '/storage/emulated/0/Download/ChatsenMod';
 
-  static Future<Box> _box(String name) async => Hive.isBoxOpen(name) ? Hive.box(name) : Hive.openBox(name);
+  static Future<Box> _box(String name) async => Hive.isBoxOpen(name) ? Hive.box(name) : await Hive.openBox(name);
 
   /// Собрать всё в одну карту. [withAccounts] — включать ли токены входа.
   static Future<Map<String, dynamic>> build({bool withAccounts = false}) async {
