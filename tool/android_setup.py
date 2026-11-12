@@ -6,6 +6,7 @@
     POST_NOTIFICATIONS, WAKE_LOCK, FOREGROUND_SERVICE;
   * <queries> для открытия https-ссылок (url_launcher, Android 11+);
   * включает core library desugaring (требует flutter_local_notifications >= 10);
+  * отключает release-lint (lintVital падает с внутренней ошибкой на url_launcher);
   * меняет подпись приложения на «Chatsen Mod».
 Запуск: python3 tool/android_setup.py  (из корня проекта, после flutter create)
 """
@@ -50,12 +51,18 @@ if kts.exists():
     if "isCoreLibraryDesugaringEnabled" not in g:
         g = re.sub(r"(compileOptions\s*\{\n)", r"\1        isCoreLibraryDesugaringEnabled = true\n", g, count=1)
         g += '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+    if "checkReleaseBuilds" not in g:
+        # Lint в release-сборке падает с NoSuchMethodError (List.removeLast) на url_launcher —
+        # баг самого lint, к коду отношения не имеет. Отключаем lintVital для release.
+        g = re.sub(r"(android\s*\{\n)", r"\1    lint {\n        checkReleaseBuilds = false\n        abortOnError = false\n    }\n", g, count=1)
     kts.write_text(g)
 elif groovy.exists():
     g = groovy.read_text()
     if "coreLibraryDesugaringEnabled" not in g:
         g = re.sub(r"(compileOptions\s*\{\n)", r"\1        coreLibraryDesugaringEnabled true\n", g, count=1)
         g += "\ndependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'\n}\n"
+    if "checkReleaseBuilds" not in g:
+        g = re.sub(r"(android\s*\{\n)", r"\1    lint {\n        checkReleaseBuilds false\n        abortOnError false\n    }\n", g, count=1)
     groovy.write_text(g)
 else:
     sys.exit("app/build.gradle(.kts) not found")
