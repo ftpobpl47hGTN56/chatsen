@@ -1,0 +1,46 @@
+name: Build Chatsen Mod APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [dearking-mod]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate android/ project
+        run: |
+          flutter create --org com.dearking --project-name chatsen --platforms android .
+          rm -rf test
+          python3 tool/android_setup.py
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: App icon (optional)
+        continue-on-error: true
+        run: dart run flutter_launcher_icons
+
+      - name: Analyze (errors only)
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings lib
+
+      - name: Build APK
+        run: flutter build apk --release --split-per-abi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chatsen-mod-apk
+          path: build/app/outputs/flutter-apk/*-release.apk

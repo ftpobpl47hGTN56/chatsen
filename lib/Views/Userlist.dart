@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '/Components/UserCard.dart';
 import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
 
 /// The [UserlistView] class is a view designed to hold the list of users currently connected to a channel. It can be refreshed with a pull-to-refresh swipe movement.
@@ -54,7 +56,13 @@ class _UserlistViewState extends State<UserlistView> {
               for (var user in group.value.where((x) => x.toLowerCase().contains(tec.text.toLowerCase()))) {
                 userlistWidgets.add(
                   InkWell(
-                    onTap: () async {},
+                    // Раньше onTap был пустой — теперь открывает карточку профиля.
+                    onTap: () => UserCard.show(context, login: user, channel: widget.channel),
+                    onLongPress: () async {
+                      await Clipboard.setData(ClipboardData(text: user));
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Ник «$user» скопирован')));
+                    },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
                       child: Text(user),

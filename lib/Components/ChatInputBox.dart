@@ -38,6 +38,72 @@ class ChatInputBoxState extends State<ChatInputBox> {
   FocusNode focusNode = FocusNode();
   Timer? timer;
 
+  // Реестр активных полей ввода по каналам — чтобы карточка юзера
+  // (в т.ч. из бокового списка онлайн) могла вставить @ник в нужный инпут.
+  static final Map<twitch.Channel, ChatInputBoxState> _instances = {};
+  static ChatInputBoxState? of(twitch.Channel channel) => _instances[channel];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.channel != null) _instances[widget.channel!] = this;
+  }
+
+  /// Диапазон «текущего слова» — от последнего пробела до курсора.
+  /// Раньше везде использовалось text.split(' ').last, из-за чего
+  /// автокомплит работал только в конце строки.
+  TextRange _currentWordRange() {
+    final text = textEditingController.text;
+    var cursor = textEditingController.selection.baseOffset;
+    if (cursor < 0 || cursor > text.length) cursor = text.length;
+    var start = cursor;
+    while (start > 0 && !RegExp(r'\s').hasMatch(text[start - 1])) {
+      start--;
+    }
+    return TextRange(start: start, end: cursor);
+  }
+
+  String get currentWord {
+    final r = _currentWordRange();
+    return textEditingController.text.substring(r.start, r.end);
+  }
+
+  /// Заменяет текущее слово на [replacement] + пробел и ставит курсор после него.
+  void replaceCurrentWord(String replacement) {
+    final text = textEditingController.text;
+    final r = _currentWordRange();
+    var after = text.substring(r.end);
+    // если сразу за курсором был хвост слова (курсор внутри слова) — съедаем его
+    final tail = RegExp(r'^\S*').firstMatch(after)!.group(0)!;
+    after = after.substring(tail.length);
+    final insert = after.startsWith(' ') ? replacement : '$replacement ';
+    final newText = text.substring(0, r.start) + insert + after;
+    final caret = r.start + insert.length + (after.startsWith(' ') ? 1 : 0);
+    textEditingController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: caret.clamp(0, newText.length)),
+    );
+    focusNode.requestFocus();
+    setState(() {});
+  }
+
+  /// Вставляет @ник в позицию курсора (используется карточкой юзера).
+  void insertMention(String login) {
+    final text = textEditingController.text;
+    var cursor = textEditingController.selection.baseOffset;
+    if (cursor < 0 || cursor > text.length) cursor = text.length;
+    final before = text.substring(0, cursor);
+    final after = text.substring(cursor);
+    final pre = before.isEmpty || before.endsWith(' ') ? '' : ' ';
+    final insert = '$pre@$login ';
+    textEditingController.value = TextEditingValue(
+      text: before + insert + after,
+      selection: TextSelection.collapsed(offset: before.length + insert.length),
+    );
+    focusNode.requestFocus();
+    setState(() {});
+  }
+
   void appendText(String str) {
     setState(() {
       textEditingController.text = '${textEditingController.text}${textEditingController.text.isNotEmpty ? ' ' : ''}$str';
@@ -46,6 +112,7 @@ class ChatInputBoxState extends State<ChatInputBox> {
 
   @override
   void dispose() {
+    if (widget.channel != null && _instances[widget.channel!] == this) _instances.remove(widget.channel!);
     textEditingController.dispose();
     focusNode.dispose();
     super.dispose();
@@ -54,9 +121,9 @@ class ChatInputBoxState extends State<ChatInputBox> {
   }
 
   List<Widget> getAutoCompletionItems() => [
-        if (textEditingController.text.split(' ').last.length >= 2 && !textEditingController.text.endsWith(' '))
+        if (currentWord.length >= 2 && !currentWord.startsWith('@'))
           for (var emote in widget.client!.emotes + widget.channel!.emotes + widget.channel!.transmitter!.emotes + widget.client!.emojis)
-            if ('${false ? ':' : ''}${emote.name}'.toLowerCase().contains(textEditingController.text.split(' ').last.toLowerCase()) && (false ? textEditingController.text.startsWith(':') : true))
+            if ('${emote.name}'.toLowerCase().contains(currentWord.toLowerCase()))
               WidgetTooltip(
                 // message: '${emote.name}',
                 message: Padding(
@@ -79,14 +146,7 @@ class ChatInputBoxState extends State<ChatInputBox> {
                 ),
 
                 child: InkWell(
-                  onTap: () async {
-                    List<String?> splits = textEditingController.text.split(' ');
-                    splits.last = (emote.alt ?? emote.name); // emote.name;
-                    textEditingController.text = splits.join(' ') + ' ';
-                    textEditingController.selection = TextSelection.fromPosition(TextPosition(offset: textEditingController.text.length));
-                    focusNode.requestFocus();
-                    setState(() {});
-                  },
+                  onTap: () async => replaceCurrentWord('${emote.alt ?? emote.name}'),
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Container(
@@ -204,6 +264,8 @@ class ChatInputBoxState extends State<ChatInputBox> {
                             border: InputBorder.none,
                           ),
                           onChanged: (text) async => setState(() {}),
+                          // перерисовать подсказки, когда курсор переставили тапом
+                          onTap: () => Future.microtask(() => setState(() {})),
                           onSubmitted: send,
                         ),
                       ),
@@ -239,10 +301,17 @@ class ChatInputBoxState extends State<ChatInputBox> {
                                     client: widget.client,
                                     channel: widget.channel,
                                     insertEmote: (emote) {
-                                      var splits = textEditingController.text.split(' ');
-                                      splits.last = emote!;
-                                      textEditingController.text = splits.join(' ') + ' ';
-                                      textEditingController.selection = TextSelection.fromPosition(TextPosition(offset: textEditingController.text.length));
+                                      // вставляем в позицию курсора, а не затираем последнее слово
+                                      final text = textEditingController.text;
+                                      var cursor = textEditingController.selection.baseOffset;
+                                      if (cursor < 0 || cursor > text.length) cursor = text.length;
+                                      final before = text.substring(0, cursor);
+                                      final pre = before.isEmpty || before.endsWith(' ') ? '' : ' ';
+                                      final insert = '$pre${emote!} ';
+                                      textEditingController.value = TextEditingValue(
+                                        text: before + insert + text.substring(cursor),
+                                        selection: TextSelection.collapsed(offset: before.length + insert.length),
+                                      );
                                       focusNode.requestFocus();
                                       Navigator.of(context).pop();
                                       setState(() {});
@@ -304,28 +373,42 @@ class ChatInputBoxState extends State<ChatInputBox> {
   }
 
   List<Widget> getAutoCompletionUsers() {
-    final startsWithAt = textEditingController.text.split(' ').last.toLowerCase().startsWith('@');
+    final word = currentWord;
+    final startsWithAt = word.startsWith('@');
+    // БАГ оригинала: условие `textEditingController.text.startsWith('@')`
+    // проверяло начало ВСЕЙ строки, а не текущего слова — поэтому
+    // «привет @ни...» не давало подсказок. Теперь смотрим только на слово у курсора.
+    final query = (startsWithAt ? word.substring(1) : word).toLowerCase();
+    if (startsWithAt ? query.isEmpty : query.length < 2) return [];
+
+    final all = widget.channel!.users.values.expand((e) => e).toSet();
+    final prefix = <String>[];
+    final contains = <String>[];
+    for (final user in all) {
+      final u = user.toLowerCase();
+      if (u.startsWith(query)) {
+        prefix.add(user);
+      } else if (u.contains(query)) {
+        contains.add(user);
+      }
+    }
+    prefix.sort((a, b) => a.length.compareTo(b.length));
+    final matches = [...prefix, ...contains].take(40);
+
     return [
-      if (textEditingController.text.split(' ').last.length >= 2 && !textEditingController.text.endsWith(' '))
-        for (var user in widget.channel!.users.values.expand((element) => element))
-          if ('${startsWithAt ? '@' : ''}$user'.toLowerCase().contains(textEditingController.text.split(' ').last.toLowerCase()) && (startsWithAt ? textEditingController.text.startsWith('@') : true))
-            InkWell(
-              onTap: () async {
-                var settings = BlocProvider.of<Settings>(context).state as SettingsLoaded;
-                var splits = textEditingController.text.split(' ');
-                splits.last = ((settings.mentionWithAt || startsWithAt) ? '@' : '') + user;
-                textEditingController.text = splits.join(' ') + ' ';
-                textEditingController.selection = TextSelection.fromPosition(TextPosition(offset: textEditingController.text.length));
-                focusNode.requestFocus();
-                setState(() {});
-              },
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(user),
-                ),
-              ),
+      for (var user in matches)
+        InkWell(
+          onTap: () async {
+            var settings = BlocProvider.of<Settings>(context).state as SettingsLoaded;
+            replaceCurrentWord(((settings.mentionWithAt || startsWithAt) ? '@' : '') + user);
+          },
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(startsWithAt ? '@$user' : user),
             ),
+          ),
+        ),
     ];
   }
 

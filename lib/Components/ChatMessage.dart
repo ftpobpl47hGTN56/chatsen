@@ -18,12 +18,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
 import 'package:flutter_svg/svg.dart';
 import '../Consts.dart';
-import '/Pages/Search.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:ui' as ui;
 import 'dart:async';
 
 import 'ChatInputBox.dart';
+import 'UserCard.dart';
 import 'UI/NetworkImageWrapper.dart';
 
 /// [ChatMessage] is a Widget that takes a [twitch.Message] and renders into something readable and interactable.
@@ -62,6 +62,82 @@ class ChatMessage extends StatelessWidget {
     return completer.future;
   }
 
+  Future<void> _copy(BuildContext context, String text, String label) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text(label)));
+  }
+
+  Future<void> _showActions(BuildContext context) async {
+    final login = message.user?.login;
+    final ts = message.dateTime == null ? '' : '${message.dateTime!.hour.toString().padLeft(2, '0')}:${message.dateTime!.minute.toString().padLeft(2, '0')} ';
+    final input = gkey?.currentState ?? (message.channel != null ? ChatInputBoxState.of(message.channel!) : null);
+    await showModalBottomSheet(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (sheet) => SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (login != null)
+              ListTile(
+                leading: const Icon(Icons.person),
+                title: Text('Профиль $login'),
+                onTap: () {
+                  Navigator.of(sheet).pop();
+                  UserCard.show(context, login: login, channel: message.channel);
+                },
+              ),
+            if (login != null && input != null)
+              ListTile(
+                leading: const Icon(Icons.alternate_email),
+                title: const Text('Ответить (@ник)'),
+                onTap: () {
+                  Navigator.of(sheet).pop();
+                  input.insertMention(login);
+                },
+              ),
+            if (login != null)
+              ListTile(
+                leading: const Icon(Icons.badge_outlined),
+                title: const Text('Копировать ник'),
+                onTap: () {
+                  Navigator.of(sheet).pop();
+                  _copy(context, login, 'Ник скопирован');
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.copy),
+              title: const Text('Копировать сообщение'),
+              onTap: () {
+                Navigator.of(sheet).pop();
+                _copy(context, message.body ?? '', 'Сообщение скопировано');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.copy_all),
+              title: const Text('Копировать с ником и временем'),
+              onTap: () {
+                Navigator.of(sheet).pop();
+                _copy(context, '$ts${message.user?.displayName ?? ''}: ${message.body ?? ''}', 'Скопировано');
+              },
+            ),
+            if (input != null)
+              ListTile(
+                leading: const Icon(Icons.content_paste_go),
+                title: const Text('Вставить текст в поле ввода'),
+                onTap: () {
+                  Navigator.of(sheet).pop();
+                  input.appendText(message.body ?? '');
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     var color = getUserColor(context, Color(int.tryParse(message.user?.color ?? '777777', radix: 16) ?? 0x777777).withAlpha(255));
@@ -80,13 +156,17 @@ class ChatMessage extends StatelessWidget {
     for (var token in message.tokens) {
       switch (token.type) {
         case twitch.MessageTokenType.Text:
+          final word = '${token.data}';
+          final mention = RegExp(r'^@([A-Za-z0-9_]{2,25})[,.:!?]*$').firstMatch(word);
           spans.add(
             TextSpan(
-              text: '${token.data} ',
+              text: '$word ',
               style: TextStyle(
                 color: (message.user == null || message.action) ? color : null,
+                fontWeight: mention != null ? FontWeight.bold : null,
                 shadows: shadows,
               ),
+              recognizer: mention == null ? null : (TapGestureRecognizer()..onTap = () => UserCard.show(context, login: mention.group(1)!, channel: message.channel)),
             ),
           );
           break;
@@ -326,36 +406,9 @@ class ChatMessage extends StatelessWidget {
         width: double.infinity,
         color: message.mention ? Theme.of(context).colorScheme.primary.withAlpha(48) : backgroundColor,
         child: InkWell(
-          onDoubleTap: () async {
-            await Clipboard.setData(ClipboardData(text: message.body ?? ''));
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                behavior: SnackBarBehavior.floating,
-                content: Text('Message copied to clipboard!'),
-                action: SnackBarAction(
-                  label: 'Paste',
-                  onPressed: () {
-                    gkey?.currentState?.appendText(message.body!);
-                  },
-                ),
-              ),
-            );
-          },
-          onLongPress: () async {
-            await Clipboard.setData(ClipboardData(text: message.body ?? ''));
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                behavior: SnackBarBehavior.floating,
-                content: Text('Message copied to clipboard!'),
-                action: SnackBarAction(
-                  label: 'Paste',
-                  onPressed: () {
-                    gkey?.currentState?.appendText(message.body!);
-                  },
-                ),
-              ),
-            );
-          },
+          // Двойной тап убран: он держал gesture arena ~300 мс и «съедал»
+          // одиночные тапы по нику. Удержание теперь открывает меню действий.
+          onLongPress: () => _showActions(context),
           // onLongPress: () async => await Clipboard.setData(ClipboardData(text: message.body ?? '')),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 8.0),
@@ -467,12 +520,7 @@ class ChatMessage extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                             shadows: shadows,
                           ),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () async => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (BuildContext context) => SearchPage(channel: message.channel, user: message.user),
-                                  ),
-                                ),
+                          recognizer: TapGestureRecognizer()..onTap = () => UserCard.show(context, login: message.user!.login!, channel: message.channel),
                         ),
                     ] +
                     spans,
