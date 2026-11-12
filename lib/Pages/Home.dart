@@ -27,6 +27,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '/Components/ChannelJoinModal.dart';
+import '/Components/UserPrefs.dart';
 import '/Components/HomeDrawer.dart';
 import '/Components/HomeTab.dart';
 import '/Components/Notification.dart';
@@ -407,20 +408,11 @@ class _HomePageState extends State<HomePage> implements twitch.Listener {
                                   message: 'Add/join a channel',
                                   child: InkWell(
                                     onTap: () async {
-                                      await showModalBottomSheet(
-                                        context: context,
-                                        backgroundColor: Colors.transparent,
-                                        builder: (context) => SafeArea(
-                                          child: Padding(
-                                            padding: EdgeInsets.only(
-                                                bottom: MediaQuery.of(context)
-                                                    .viewInsets
-                                                    .bottom),
-                                            child: ChannelJoinModal(
-                                              client: client,
-                                              refresh: () => setState(() {}),
-                                            ),
-                                          ),
+                                      await showChatsenSheet(
+                                        context,
+                                        (_) => ChannelJoinModal(
+                                          client: client,
+                                          refresh: () => setState(() {}),
                                         ),
                                       );
                                     },

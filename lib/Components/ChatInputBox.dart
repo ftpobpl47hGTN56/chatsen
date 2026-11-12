@@ -88,14 +88,17 @@ class ChatInputBoxState extends State<ChatInputBox> {
   }
 
   /// Вставляет @ник в позицию курсора (используется карточкой юзера).
-  void insertMention(String login) {
+  void insertMention(String login) => insertText('@$login');
+
+  /// Вставляет произвольный текст (ник, эмоут) в позицию курсора с пробелами по краям.
+  void insertText(String str) {
     final text = textEditingController.text;
     var cursor = textEditingController.selection.baseOffset;
     if (cursor < 0 || cursor > text.length) cursor = text.length;
     final before = text.substring(0, cursor);
     final after = text.substring(cursor);
     final pre = before.isEmpty || before.endsWith(' ') ? '' : ' ';
-    final insert = '$pre@$login ';
+    final insert = '$pre$str ';
     textEditingController.value = TextEditingValue(
       text: before + insert + after,
       selection: TextSelection.collapsed(offset: before.length + insert.length),

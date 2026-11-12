@@ -24,6 +24,8 @@ import 'dart:async';
 
 import 'ChatInputBox.dart';
 import 'UserCard.dart';
+import 'EmotePopup.dart';
+import 'UserPrefs.dart';
 import 'UI/NetworkImageWrapper.dart';
 
 /// [ChatMessage] is a Widget that takes a [twitch.Message] and renders into something readable and interactable.
@@ -72,11 +74,9 @@ class ChatMessage extends StatelessWidget {
     final login = message.user?.login;
     final ts = message.dateTime == null ? '' : '${message.dateTime!.hour.toString().padLeft(2, '0')}:${message.dateTime!.minute.toString().padLeft(2, '0')} ';
     final input = gkey?.currentState ?? (message.channel != null ? ChatInputBoxState.of(message.channel!) : null);
-    await showModalBottomSheet(
-      context: context,
-      useSafeArea: true,
-      showDragHandle: true,
-      builder: (sheet) => SingleChildScrollView(
+    await showChatsenSheet(
+      context,
+      (sheet) => SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -138,8 +138,38 @@ class ChatMessage extends StatelessWidget {
     );
   }
 
+  /// Свёрнутая строка для сообщения из игнора: тап раскрывает/сворачивает обратно.
+  Widget _ignoredStub(BuildContext context) {
+    final theme = Theme.of(context);
+    final login = message.user?.login ?? '';
+    final name = UserPrefs.instance.aliasOf(login) ?? message.user?.displayName ?? login;
+    final ts = message.dateTime == null ? '' : '${message.dateTime!.hour.toString().padLeft(2, '0')}:${message.dateTime!.minute.toString().padLeft(2, '0')} ';
+    return Container(
+      key: ValueKey(message.id),
+      width: double.infinity,
+      color: backgroundColor,
+      child: InkWell(
+        onTap: () => UserPrefs.instance.toggleRevealed(message.id),
+        onLongPress: () => _showActions(context),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 8.0),
+          child: Text(
+            '$ts$name: скрыто (игнор) — тап, чтобы показать',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withAlpha(90), fontStyle: FontStyle.italic),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final prefs = UserPrefs.instance;
+    if (prefs.isIgnored(message.user?.login) && !prefs.revealed.contains(message.id)) {
+      return _ignoredStub(context);
+    }
     var color = getUserColor(context, Color(int.tryParse(message.user?.color ?? '777777', radix: 16) ?? 0x777777).withAlpha(255));
     var spans = <InlineSpan>[];
     var shadowSpread = 1.0;
@@ -257,12 +287,16 @@ class ChatMessage extends StatelessWidget {
                           ],
                         ),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 4.0),
-                        child: NetworkImageW(
-                          token.data.provider == 'Twitch' ? token.data.mipmap[1] : token.data.mipmap.last,
-                          scale: token.data.provider == 'Twitch' ? 2.0 : (token.data.mipmap.length == 1 ? 1.0 : 4.0),
-                          height: token.data.provider == 'Emoji' ? 24.0 : null,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => EmotePopup.show(context, emotes: [token.data as twitch.Emote], channel: message.channel, input: gkey?.currentState),
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 4.0),
+                          child: NetworkImageW(
+                            token.data.provider == 'Twitch' ? token.data.mipmap[1] : token.data.mipmap.last,
+                            scale: token.data.provider == 'Twitch' ? 2.0 : (token.data.mipmap.length == 1 ? 1.0 : 4.0),
+                            height: token.data.provider == 'Emoji' ? 24.0 : null,
+                          ),
                         ),
                       ),
                     ),
@@ -333,7 +367,10 @@ class ChatMessage extends StatelessWidget {
                     ],
                   ),
                 ),
-                child: Stack(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => EmotePopup.show(context, emotes: List<twitch.Emote>.from(token.data), channel: message.channel, input: gkey?.currentState),
+                  child: Stack(
                   alignment: Alignment.center,
                   children: [
                     for (var emote in token.data)
@@ -346,6 +383,7 @@ class ChatMessage extends StatelessWidget {
                         ),
                       ),
                   ],
+                ),
                 ),
               ),
             ),
@@ -409,6 +447,8 @@ class ChatMessage extends StatelessWidget {
           // Двойной тап убран: он держал gesture arena ~300 мс и «съедал»
           // одиночные тапы по нику. Удержание теперь открывает меню действий.
           onLongPress: () => _showActions(context),
+          // раскрытое сообщение из игнора сворачивается обратно тапом
+          onTap: UserPrefs.instance.isIgnored(message.user?.login) ? () => UserPrefs.instance.toggleRevealed(message.id) : null,
           // onLongPress: () async => await Clipboard.setData(ClipboardData(text: message.body ?? '')),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 8.0),
@@ -514,7 +554,11 @@ class ChatMessage extends StatelessWidget {
                           ),
                       if (message.user != null)
                         TextSpan(
-                          text: '${message.user!.displayName}' + (message.user!.displayName!.toLowerCase() != message.user!.login!.toLowerCase() ? ' (${message.user!.login})' : '') + (message.action ? ' ' : ': '),
+                          // локальное имя (Rename) показываем вместо ника, оригинальный логин — в скобках
+                          text: (UserPrefs.instance.aliasOf(message.user!.login) != null
+                                  ? '${UserPrefs.instance.aliasOf(message.user!.login)} (${message.user!.login})'
+                                  : '${message.user!.displayName}' + (message.user!.displayName!.toLowerCase() != message.user!.login!.toLowerCase() ? ' (${message.user!.login})' : '')) +
+                              (message.action ? ' ' : ': '),
                           style: TextStyle(
                             color: color,
                             fontWeight: FontWeight.bold,

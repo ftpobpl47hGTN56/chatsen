@@ -11,7 +11,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '/BlockedUsers/BlockedUsersCubit.dart';
 import '/Pages/Search.dart';
 import 'ChatInputBox.dart';
+import 'EmotePopup.dart' show ChatsenActionButton;
 import 'UI/NetworkImageWrapper.dart';
+import 'UserPrefs.dart';
 
 /// Карточка профиля пользователя (bottom sheet).
 /// Открывается тапом по нику в чате, тапом по @упоминанию и из списка юзеров.
@@ -24,13 +26,7 @@ class UserCard extends StatefulWidget {
   static Future<void> show(BuildContext context, {required String login, twitch.Channel? channel}) async {
     final clean = login.replaceAll(RegExp(r'^@+|[,.:!?]+$'), '');
     if (clean.isEmpty) return;
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: true,
-      builder: (_) => UserCard(login: clean, channel: channel),
-    );
+    await showChatsenSheet(context, (_) => UserCard(login: clean, channel: channel));
   }
 
   @override
@@ -66,7 +62,18 @@ class _UserCardState extends State<UserCard> {
   @override
   void initState() {
     super.initState();
+    UserPrefs.instance.addListener(_onPrefs);
     _load();
+  }
+
+  @override
+  void dispose() {
+    UserPrefs.instance.removeListener(_onPrefs);
+    super.dispose();
+  }
+
+  void _onPrefs() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _load() async {
@@ -93,6 +100,7 @@ class _UserCardState extends State<UserCard> {
       );
       final data = (jsonDecode(res.body)['data'] as List?) ?? [];
       if (data.isEmpty) {
+        if (!mounted) return;
         setState(() {
           loading = false;
           error = res.statusCode == 200 ? 'Пользователь не найден (забанен или удалён)' : 'Helix: HTTP ${res.statusCode}';
@@ -137,119 +145,196 @@ class _UserCardState extends State<UserCard> {
     return m > 0 ? '$y г. $m мес.' : '$y г.';
   }
 
+  Future<void> _rename(String login, String display) async {
+    final ctrl = TextEditingController(text: UserPrefs.instance.aliasOf(login) ?? '');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Имя для $display'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          maxLength: 32,
+          decoration: const InputDecoration(hintText: 'Локальное имя (видно только вам)'),
+          onSubmitted: (v) => Navigator.of(ctx).pop(v),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(''), child: const Text('Сбросить')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Отмена')),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(ctrl.text), child: const Text('OK')),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (result == null) return; // отмена
+    await UserPrefs.instance.setAlias(login, result);
+    _snack(result.trim().isEmpty ? 'Имя сброшено' : '$login теперь «${result.trim()}»');
+  }
+
   @override
   Widget build(BuildContext context) {
+    final prefs = UserPrefs.instance;
     final login = info?.login ?? widget.login;
     final display = info?.displayName ?? widget.login;
+    final alias = prefs.aliasOf(login);
+    final ignored = prefs.isIgnored(login);
     final blocked = context.watch<BlockedUsersCubit>().state.map((e) => e.toLowerCase()).contains(login.toLowerCase());
     final input = widget.channel != null ? ChatInputBoxState.of(widget.channel!) : null;
     final msgCount = widget.channel?.messages.where((m) => m.user?.login?.toLowerCase() == login.toLowerCase()).length ?? 0;
     final theme = Theme.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              children: [
+                ClipOval(
+                  child: SizedBox(
+                    width: 64,
+                    height: 64,
+                    child: info?.avatar != null
+                        ? NetworkImageW(info!.avatar!, fit: BoxFit.cover)
+                        : Container(color: theme.dividerColor, child: loading ? const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.person, size: 32)),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SelectableText(alias ?? display, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                      if (alias != null || display.toLowerCase() != login.toLowerCase())
+                        SelectableText(alias != null ? '$display · $login' : login, style: theme.textTheme.bodyMedium),
+                      if (info?.createdAt != null)
+                        Text(
+                          'Аккаунт: ${info!.createdAt!.day.toString().padLeft(2, '0')}.${info!.createdAt!.month.toString().padLeft(2, '0')}.${info!.createdAt!.year} (${_age(info!.createdAt!)})',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          if (widget.channel != null) Text('Сообщений: $msgCount', style: theme.textTheme.bodySmall),
+                          if (info?.broadcasterType != null && info!.broadcasterType!.isNotEmpty) Text(info!.broadcasterType!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary)),
+                          if (ignored) Text('в игноре', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.tertiary)),
+                          if (blocked) Text('заблокирован', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (info?.description != null && info!.description!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(info!.description!, maxLines: 3, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodyMedium),
+            ),
+          ],
+          if (error != null) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(error!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
+            ),
+          ],
+          const SizedBox(height: 12),
+          // Ряд 1 — частые действия
           Row(
             children: [
-              ClipOval(
-                child: SizedBox(
-                  width: 64,
-                  height: 64,
-                  child: info?.avatar != null
-                      ? NetworkImageW(info!.avatar!, fit: BoxFit.cover)
-                      : Container(color: theme.dividerColor, child: loading ? const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.person, size: 32)),
+              if (input != null)
+                Expanded(
+                  child: ChatsenActionButton(
+                    icon: Icons.alternate_email,
+                    label: 'Упомянуть',
+                    onTap: () {
+                      input.insertMention(login);
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ),
+              Expanded(
+                child: ChatsenActionButton(
+                  icon: Icons.copy,
+                  label: 'Ник',
+                  onTap: () async {
+                    await Clipboard.setData(ClipboardData(text: login));
+                    _snack('Ник «$login» скопирован');
+                  },
                 ),
               ),
-              const SizedBox(width: 16),
+              if (widget.channel != null)
+                Expanded(
+                  child: ChatsenActionButton(
+                    icon: Icons.history,
+                    label: 'Сообщения',
+                    onTap: () {
+                      final msg = widget.channel!.messages.lastWhereOrNull((m) => m.user?.login?.toLowerCase() == login.toLowerCase());
+                      final nav = Navigator.of(context);
+                      nav.pop();
+                      if (msg?.user == null) {
+                        _snack('Нет сообщений от $login в этом чате');
+                        return;
+                      }
+                      nav.push(MaterialPageRoute(builder: (_) => SearchPage(channel: widget.channel, user: msg!.user)));
+                    },
+                  ),
+                ),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Ник выделяемый — можно скопировать кусок вручную.
-                    SelectableText(display, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                    if (display.toLowerCase() != login.toLowerCase()) SelectableText(login, style: theme.textTheme.bodyMedium),
-                    if (info?.createdAt != null)
-                      Text(
-                        'Аккаунт: ${info!.createdAt!.day.toString().padLeft(2, '0')}.${info!.createdAt!.month.toString().padLeft(2, '0')}.${info!.createdAt!.year} (${_age(info!.createdAt!)})',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    if (info?.broadcasterType != null && info!.broadcasterType!.isNotEmpty) Text(info!.broadcasterType!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary)),
-                    if (widget.channel != null) Text('Сообщений в этом чате: $msgCount', style: theme.textTheme.bodySmall),
-                  ],
+                child: ChatsenActionButton(
+                  icon: Icons.open_in_new,
+                  label: 'twitch.tv',
+                  onTap: () => launchUrl(Uri.parse('https://www.twitch.tv/$login'), mode: LaunchMode.externalApplication),
                 ),
               ),
             ],
           ),
-          if (info?.description != null && info!.description!.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(info!.description!, maxLines: 4, overflow: TextOverflow.ellipsis),
-          ],
-          if (error != null) ...[
-            const SizedBox(height: 8),
-            Text(error!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
-          ],
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          // Ряд 2 — управление
+          Row(
             children: [
-              if (input != null)
-                FilledButton.tonalIcon(
-                  icon: const Icon(Icons.alternate_email),
-                  label: const Text('Упомянуть'),
-                  onPressed: () {
-                    input.insertMention(login);
-                    Navigator.of(context).pop();
+              Expanded(
+                child: ChatsenActionButton(
+                  icon: Icons.drive_file_rename_outline,
+                  label: alias != null ? 'Имя ✓' : 'Rename',
+                  active: alias != null,
+                  onTap: () => _rename(login, display),
+                ),
+              ),
+              Expanded(
+                child: ChatsenActionButton(
+                  icon: ignored ? Icons.visibility : Icons.visibility_off,
+                  label: ignored ? 'Не игнор' : 'Игнор',
+                  active: ignored,
+                  onTap: () async {
+                    await prefs.setIgnored(login, !ignored);
+                    _snack(ignored ? 'Сообщения $login снова видны' : 'Сообщения $login свёрнуты (тап — показать)');
                   },
                 ),
-              FilledButton.tonalIcon(
-                icon: const Icon(Icons.copy),
-                label: const Text('Копировать ник'),
-                onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: login));
-                  _snack('Ник «$login» скопирован');
-                },
               ),
-              if (widget.channel != null)
-                FilledButton.tonalIcon(
-                  icon: const Icon(Icons.history),
-                  label: const Text('Сообщения'),
-                  onPressed: () {
-                    final msg = widget.channel!.messages.lastWhereOrNull(
-                      (m) => m.user?.login?.toLowerCase() == login.toLowerCase(),
-                    );
-                    final nav = Navigator.of(context);
-                    nav.pop();
-                    if (msg?.user == null) {
-                      _snack('Нет сообщений от $login в этом чате');
-                      return;
+              Expanded(
+                child: ChatsenActionButton(
+                  icon: blocked ? Icons.lock_open : Icons.block,
+                  label: blocked ? 'Разблок.' : 'Блок',
+                  color: blocked ? null : theme.colorScheme.error,
+                  active: blocked,
+                  onTap: () async {
+                    final cubit = context.read<BlockedUsersCubit>();
+                    if (blocked) {
+                      final existing = cubit.state.firstWhere((e) => e.toLowerCase() == login.toLowerCase());
+                      await cubit.remove(existing);
+                      _snack('$login разблокирован');
+                    } else {
+                      await cubit.add(login.toLowerCase());
+                      _snack('$login полностью скрыт из чата');
                     }
-                    nav.push(MaterialPageRoute(builder: (_) => SearchPage(channel: widget.channel, user: msg!.user)));
                   },
                 ),
-              FilledButton.tonalIcon(
-                icon: Icon(blocked ? Icons.lock_open : Icons.block),
-                label: Text(blocked ? 'Разблокировать' : 'Заблокировать'),
-                style: blocked ? null : FilledButton.styleFrom(foregroundColor: theme.colorScheme.error),
-                onPressed: () async {
-                  final cubit = context.read<BlockedUsersCubit>();
-                  if (blocked) {
-                    final existing = cubit.state.firstWhere((e) => e.toLowerCase() == login.toLowerCase());
-                    await cubit.remove(existing);
-                    _snack('$login разблокирован');
-                  } else {
-                    await cubit.add(login.toLowerCase());
-                    _snack('$login скрыт из чата');
-                  }
-                },
-              ),
-              FilledButton.tonalIcon(
-                icon: const Icon(Icons.open_in_new),
-                label: const Text('twitch.tv'),
-                onPressed: () => launchUrl(Uri.parse('https://www.twitch.tv/$login'), mode: LaunchMode.externalApplication),
               ),
             ],
           ),

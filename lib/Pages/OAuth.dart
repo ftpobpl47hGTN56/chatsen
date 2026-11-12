@@ -138,6 +138,9 @@ class _OAuthPageState extends State<OAuthPage> {
             // To create clips
             // 'clips:edit',
 
+            // DearKing mod: список каналов, на которые подписан (окно добавления чата)
+            'user:read:follows',
+
             // Follows, no longer working
             // 'user_follows_edit',
             // 'user:edit:follows',

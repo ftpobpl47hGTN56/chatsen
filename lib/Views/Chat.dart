@@ -5,6 +5,7 @@ import '/Settings/Settings.dart';
 import '/Settings/SettingsState.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '/Components/UserPrefs.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '/Components/ChatInputBox.dart';
@@ -88,7 +89,10 @@ class _ChatViewState extends State<ChatView> implements twitch.Listener {
               return true;
             },
             child: BlocBuilder<Settings, SettingsState>(
-              builder: (context, state) {
+              builder: (context, state) => AnimatedBuilder(
+                // перерисовка при изменении игнора / локальных имён
+                animation: UserPrefs.instance,
+                builder: (context, _) {
                 var i = 0;
                 var blockedUsers = List<String>.from(BlocProvider.of<BlockedUsersCubit>(context).state).map((element) => element.toLowerCase()).toList();
                 return ListView(
@@ -113,6 +117,7 @@ class _ChatViewState extends State<ChatView> implements twitch.Listener {
                   ].reversed.toList(),
                 );
               },
+              ),
             ),
           ),
         ),

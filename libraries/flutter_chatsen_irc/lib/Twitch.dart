@@ -505,7 +505,7 @@ class Channel {
         for (var emoteData in emoteSet['emoticons']) {
           var emote = Emote(
             name: emoteData['name'],
-            // id: emoteData['id'], // TODO: Fix implementation
+            id: '${emoteData['id']}', // DearKing mod: нужен для попапа эмоута
             provider: 'FFZ',
             mipmap: [
               for (var url in emoteData['urls'].values) url.startsWith('http') ? url : 'https:$url',
@@ -1118,7 +1118,7 @@ class Client {
         for (var emoteData in emoteSet['emoticons']) {
           var emote = Emote(
             name: emoteData['name'],
-            // id: emoteData['id'],
+            id: '${emoteData['id']}',
             provider: 'FFZ',
             mipmap: [
               for (var url in emoteData['urls'].values) url.startsWith('http') ? url : 'https:$url',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '/Components/UserCard.dart';
+import '/Components/UserPrefs.dart';
 import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
 
 /// The [UserlistView] class is a view designed to hold the list of users currently connected to a channel. It can be refreshed with a pull-to-refresh swipe movement.
@@ -65,7 +66,10 @@ class _UserlistViewState extends State<UserlistView> {
                     },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
-                      child: Text(user),
+                      child: Text(
+                        UserPrefs.instance.aliasOf(user) != null ? '${UserPrefs.instance.aliasOf(user)} ($user)' : user,
+                        style: UserPrefs.instance.isIgnored(user) ? TextStyle(color: Theme.of(context).disabledColor, fontStyle: FontStyle.italic) : null,
+                      ),
                     ),
                   ),
                 );
