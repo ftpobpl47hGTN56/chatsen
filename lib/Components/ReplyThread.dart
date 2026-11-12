@@ -56,7 +56,7 @@ class _ReplyThreadState extends State<ReplyThread> {
     final rootFallback = root == null ? replies.firstWhereOrNull((m) => m.replyParentId == rootId) ?? widget.message : null;
 
     return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.7,
+      height: MediaQuery.sizeOf(context).height * 0.7,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -86,7 +86,7 @@ class _ReplyThreadState extends State<ReplyThread> {
                     padding: const EdgeInsets.all(8),
                     child: Text.rich(
                       TextSpan(children: [
-                        TextSpan(text: '@${rootFallback?.replyParentName ?? ''}: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        TextSpan(text: '@${rootFallback?.replyParentName ?? ''}: ', style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
                         TextSpan(text: rootFallback?.replyParentBody ?? tr('(original message is no longer in chat)', '(исходное сообщение уже удалено из чата)')),
                       ]),
                     ),

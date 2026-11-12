@@ -52,7 +52,7 @@ class _CustomMentionModalState extends State<CustomMentionModal> {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.75),
           child: ListView(
             shrinkWrap: true,
             children: [

@@ -109,7 +109,7 @@ class _ChatViewState extends State<ChatView> implements twitch.Listener {
                 return ListView.builder(
                   reverse: true,
                   controller: scrollController,
-                  padding: MediaQuery.of(context).padding + (Platform.isMacOS ? EdgeInsets.only(top: 26.0) : EdgeInsets.zero) + EdgeInsets.only(bottom: (kDebugMode || widget.channel?.transmitter?.credentials?.token != null ? (36.0 + 4.0) : 0.0) + 8.0, top: 8.0),
+                  padding: MediaQuery.paddingOf(context) + (Platform.isMacOS ? EdgeInsets.only(top: 26.0) : EdgeInsets.zero) + EdgeInsets.only(bottom: (kDebugMode || widget.channel?.transmitter?.credentials?.token != null ? (36.0 + 4.0) : 0.0) + 8.0, top: 8.0),
                   itemCount: visible.length,
                   // не держать в памяти картинки далеко за экраном
                   cacheExtent: 600,
@@ -142,7 +142,7 @@ class _ChatViewState extends State<ChatView> implements twitch.Listener {
             ),
           ),
         ),
-        if ((Platform.isMacOS ? 0.0 : MediaQuery.of(context).padding.top) > 0.0 && (MediaQuery.of(context).size.aspectRatio > 1.0 ? true : BlocProvider.of<StreamOverlayBloc>(context).state is StreamOverlayClosed))
+        if ((Platform.isMacOS ? 0.0 : MediaQuery.paddingOf(context).top) > 0.0 && (MediaQuery.sizeOf(context).aspectRatio > 1.0 ? true : BlocProvider.of<StreamOverlayBloc>(context).state is StreamOverlayClosed))
           WidgetBlur(
             child: Material(
               color: Theme.of(context).canvasColor.withAlpha(UserPrefs.instance.panelAlpha(196)),
@@ -150,8 +150,8 @@ class _ChatViewState extends State<ChatView> implements twitch.Listener {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    // height: Platform.isMacOS ? 26.0 : MediaQuery.of(context).padding.top,
-                    height: MediaQuery.of(context).padding.top,
+                    // height: Platform.isMacOS ? 26.0 : MediaQuery.paddingOf(context).top,
+                    height: MediaQuery.paddingOf(context).top,
                   ),
                   Container(
                     color: Theme.of(context).dividerColor,

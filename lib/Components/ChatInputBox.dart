@@ -242,7 +242,7 @@ class ChatInputBoxState extends State<ChatInputBox> {
         if (replyingTo != null)
           Container(
             color: Theme.of(context).colorScheme.primary.withAlpha(30),
-            padding: EdgeInsets.only(left: 12 + MediaQuery.of(context).padding.left, right: 4 + MediaQuery.of(context).padding.right),
+            padding: EdgeInsets.only(left: 12 + MediaQuery.paddingOf(context).left, right: 4 + MediaQuery.paddingOf(context).right),
             child: Row(
               children: [
                 Icon(Icons.reply, size: 18, color: Theme.of(context).colorScheme.primary),
@@ -268,8 +268,8 @@ class ChatInputBoxState extends State<ChatInputBox> {
             ),
           ),
         Padding(
-          // MediaQuery.of(context).padding.
-          padding: EdgeInsets.only(left: MediaQuery.of(context).padding.left, right: MediaQuery.of(context).padding.right),
+          // MediaQuery.paddingOf(context).
+          padding: EdgeInsets.only(left: MediaQuery.paddingOf(context).left, right: MediaQuery.paddingOf(context).right),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -353,7 +353,7 @@ class ChatInputBoxState extends State<ChatInputBox> {
                               backgroundColor: Colors.transparent,
                               builder: (context) => SafeArea(
                                 child: Padding(
-                                  padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+                                  padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
                                   child: EmoteListModal(
                                     client: widget.client,
                                     channel: widget.channel,
@@ -421,7 +421,7 @@ class ChatInputBoxState extends State<ChatInputBox> {
                   ),
                 ),
               ],
-              SizedBox(height: MediaQuery.of(context).padding.bottom),
+              SizedBox(height: MediaQuery.paddingOf(context).bottom),
             ],
           ),
         ),

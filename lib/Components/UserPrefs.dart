@@ -36,21 +36,21 @@ class UserPrefs extends ChangeNotifier {
   // ---------- вид чата ----------
 
   /// Значки у ника: 0 — все, 1 — только роли (стример/мод/VIP/саб), 2 — скрыть все.
-  int get badgeMode => (_mod?.get('badgeMode') as int?) ?? 0;
+  int get badgeMode => _g<int>('badgeMode', 0);
   Future<void> setBadgeMode(int v) async {
     await _mod?.put('badgeMode', v);
     notifyListeners();
   }
 
   /// Стиль @упоминаний в тексте: 0 обычный, 1 акцент, 2 плашка, 3 рамка, 4 цвет ника.
-  int get mentionStyle => (_mod?.get('mentionStyle') as int?) ?? 1;
+  int get mentionStyle => _g<int>('mentionStyle', 1);
   Future<void> setMentionStyle(int v) async {
     await _mod?.put('mentionStyle', v);
     notifyListeners();
   }
 
   /// Рамка 2px цвета акцента у кнопок и окон.
-  bool get accentBorders => (_mod?.get('accentBorders') as bool?) ?? false;
+  bool get accentBorders => _g<bool>('accentBorders', false);
   Future<void> setAccentBorders(bool v) async {
     await _mod?.put('accentBorders', v);
     appearance.value++;
@@ -58,7 +58,7 @@ class UserPrefs extends ChangeNotifier {
   }
 
   /// Полупрозрачные панели (шторка, нижние карточки). По умолчанию выключено — сплошной фон.
-  bool get translucent => (_mod?.get('translucent') as bool?) ?? false;
+  bool get translucent => _g<bool>('translucent', false);
   Future<void> setTranslucent(bool v) async {
     await _mod?.put('translucent', v);
     appearance.value++;
@@ -71,7 +71,8 @@ class UserPrefs extends ChangeNotifier {
   /// Локальный цвет ника для юзера (выбран в карточке), или null.
   Color? userColor(String? login) {
     if (login == null) return null;
-    final v = _colors?.get(login.toLowerCase()) as int?;
+    final raw = _colors?.get(login.toLowerCase());
+    final v = raw is int ? raw : null;
     return v == null ? null : Color(v);
   }
 
@@ -88,7 +89,7 @@ class UserPrefs extends ChangeNotifier {
 
   /// Максимум сообщений на канал: столько рисуется И хранится. Лишние (самые старые)
   /// удаляются автоматически — это и есть автоочистка.
-  int get renderLimit => (_mod?.get('renderLimit') as int?) ?? 300;
+  int get renderLimit => _g<int>('renderLimit', 300);
   Future<void> setRenderLimit(int v) async {
     final n = v.clamp(20, 1000);
     await _mod?.put('renderLimit', n);
@@ -97,7 +98,7 @@ class UserPrefs extends ChangeNotifier {
   }
 
   /// Размытие (BackdropFilter) под панелями. По умолчанию выключено — главный источник фризов.
-  bool get blur => (_mod?.get('blur') as bool?) ?? false;
+  bool get blur => _g<bool>('blur', false);
   Future<void> setBlur(bool v) async {
     await _mod?.put('blur', v);
     notifyListeners();
@@ -114,7 +115,7 @@ class UserPrefs extends ChangeNotifier {
 
   /// 'ru' или 'en'. По умолчанию — язык системы.
   String get lang {
-    final v = _mod?.get('lang') as String?;
+    final v = _g<String?>('lang', null);
     if (v != null) return v;
     return PlatformDispatcher.instance.locale.languageCode == 'ru' ? 'ru' : 'en';
   }
@@ -128,20 +129,20 @@ class UserPrefs extends ChangeNotifier {
   }
 
   /// Последний выбранный хостинг для загрузки файлов.
-  String get uploadHost => (_mod?.get('uploadHost') as String?) ?? 'kappa';
+  String get uploadHost => _g<String>('uploadHost', 'kappa');
   Future<void> setUploadHost(String v) async => _mod?.put('uploadHost', v);
 
   /// Автосохранение настроек в файл (Загрузки/ChatsenMod). По умолчанию включено.
-  bool get autoBackup => (_mod?.get('autoBackup') as bool?) ?? true;
+  bool get autoBackup => _g<bool>('autoBackup', true);
   Future<void> setAutoBackup(bool v) async {
     await _mod?.put('autoBackup', v);
     notifyListeners();
   }
 
   /// Путь и время последнего автосохранения — показываем в настройках.
-  String? get lastBackupPath => _mod?.get('lastBackupPath') as String?;
+  String? get lastBackupPath => _g<String?>('lastBackupPath', null);
   DateTime? get lastBackupTime {
-    final v = _mod?.get('lastBackupTime') as int?;
+    final v = _g<int?>('lastBackupTime', null);
     return v == null ? null : DateTime.fromMillisecondsSinceEpoch(v);
   }
 
@@ -151,7 +152,7 @@ class UserPrefs extends ChangeNotifier {
   }
 
   /// Первый запуск после установки: предложить восстановление один раз.
-  bool get restoreOffered => (_mod?.get('restoreOffered') as bool?) ?? false;
+  bool get restoreOffered => _g<bool>('restoreOffered', false);
   Future<void> setRestoreOffered() async => _mod?.put('restoreOffered', true);
 
   /// Всё, что хранит мод (для экспорта/импорта).
@@ -196,7 +197,7 @@ class UserPrefs extends ChangeNotifier {
 
   /// Цвет фона (ARGB) или null — стандартная тема.
   Color? get background {
-    final v = _mod?.get('bgColor') as int?;
+    final v = _g<int?>('bgColor', null);
     return v == null ? null : Color(v);
   }
 
@@ -222,6 +223,12 @@ class UserPrefs extends ChangeNotifier {
     if (root != null) visit(root);
   }
 
+  /// Безопасное чтение настройки: значение не того типа (например, из чужого файла) → дефолт.
+  T _g<T>(String key, T fallback) {
+    final v = _mod?.get(key);
+    return v is T ? v : fallback;
+  }
+
   String _k(String login) => login.toLowerCase();
 
   bool isIgnored(String? login) => login != null && (_ignored?.get(_k(login)) == true);
@@ -237,7 +244,10 @@ class UserPrefs extends ChangeNotifier {
 
   List<String> get ignoredUsers => List<String>.from(_ignored?.keys ?? const []);
 
-  String? aliasOf(String? login) => login == null ? null : _aliases?.get(_k(login)) as String?;
+  String? aliasOf(String? login) {
+    final v = login == null ? null : _aliases?.get(_k(login));
+    return v is String ? v : null;
+  }
 
   Future<void> setAlias(String login, String? alias) async {
     final a = alias?.trim();
@@ -273,7 +283,7 @@ Future<T?> showChatsenSheet<T>(BuildContext context, WidgetBuilder builder) asyn
       onShow: hideBars,
       child: Padding(
         // запас снизу, если навбар всё-таки показан свайпом — кнопки не уедут под него
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewPadding.bottom + MediaQuery.of(ctx).viewInsets.bottom),
+        padding: EdgeInsets.only(bottom: MediaQuery.viewPaddingOf(ctx).bottom + MediaQuery.viewInsetsOf(ctx).bottom),
         child: builder(ctx),
       ),
     ),

@@ -58,15 +58,21 @@ class Backup {
     if (settings is Map) {
       final box = await _box('Settings');
       for (final e in settings.entries) {
-        await box.put(e.key, e.value);
+        final v = e.value;
+        // JSON отдаёт List<dynamic>, а настройки ждут List<String> — иначе блок падает при запуске
+        if (v is List) {
+          await box.put(e.key, List<String>.from(v.map((x) => '$x')));
+        } else if (v is bool || v is int || v is double || v is String) {
+          await box.put(e.key, v);
+        }
       }
     }
     final theme = data['theme'];
     if (theme is Map) {
       final box = await _box('Theme');
-      if (theme['mode'] != null) await box.put('themeMode', theme['mode']);
-      if (theme['colorScheme'] != null) await box.put('themeColorScheme', theme['colorScheme']);
-      await box.put('themeHighContrast', theme['highContrast'] ?? false);
+      if (theme['mode'] is int) await box.put('themeMode', theme['mode']);
+      if (theme['colorScheme'] is String) await box.put('themeColorScheme', theme['colorScheme']);
+      await box.put('themeHighContrast', theme['highContrast'] == true);
     }
     final accounts = data['accounts'];
     if (accounts is List && accounts.isNotEmpty) {

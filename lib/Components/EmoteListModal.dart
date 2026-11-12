@@ -58,7 +58,7 @@ class _EmoteListModalState extends State<EmoteListModal> {
                     child: Container(width: 32.0, height: 2.0, color: Theme.of(context).dividerColor),
                   ),
                   Container(
-                    height: MediaQuery.of(context).size.height / 3.0,
+                    height: MediaQuery.sizeOf(context).height / 3.0,
                     child: Column(
                       children: [
                         SizedBox(

@@ -277,7 +277,7 @@ class _HomePageState extends State<HomePage> implements twitch.Listener {
                 setState(() {});
               });
             }
-            var horizontal = MediaQuery.of(context).size.aspectRatio > 1.0;
+            var horizontal = MediaQuery.sizeOf(context).aspectRatio > 1.0;
             // // var videoPlayer = Container(color: Theme.of(context).primaryColor);
             var videoPlayer = state is StreamOverlayOpened
                 ? _StreamOverlayWebView(
@@ -467,7 +467,7 @@ class _HomePageState extends State<HomePage> implements twitch.Listener {
                     SingleChildScrollView(
                       child: Container(
                         constraints: BoxConstraints(
-                            minHeight: MediaQuery.of(context).size.height),
+                            minHeight: MediaQuery.sizeOf(context).height),
                         child: Center(
                           child: Padding(
                             padding: EdgeInsets.symmetric(
@@ -529,7 +529,7 @@ class _HomePageState extends State<HomePage> implements twitch.Listener {
                 //     ],
                 //   );
                 // : Padding(
-                //     padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+                //     padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
                 //     child: TitleBarHide(
                 //       child: Scaffold(
                 //         drawerScrimColor: Colors.transparent,
@@ -628,12 +628,10 @@ class _HomePageState extends State<HomePage> implements twitch.Listener {
                                   color: Colors.transparent,
                                   child: Padding(
                                     padding: EdgeInsets.only(
-                                        top: MediaQuery.of(context).padding.top,
-                                        bottom: MediaQuery.of(context)
-                                            .padding
+                                        top: MediaQuery.paddingOf(context).top,
+                                        bottom: MediaQuery.paddingOf(context)
                                             .bottom,
-                                        left: MediaQuery.of(context)
-                                            .padding
+                                        left: MediaQuery.paddingOf(context)
                                             .left),
                                     child: Stack(
                                       children: [

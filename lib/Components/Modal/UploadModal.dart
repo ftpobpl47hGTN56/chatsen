@@ -156,7 +156,7 @@ class _UploadModalState extends State<UploadModal> {
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.35),
+                constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.35),
                 child: Image.memory(widget.file.bytes!, fit: BoxFit.contain),
               ),
             )

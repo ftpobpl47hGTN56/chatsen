@@ -41,7 +41,7 @@ class BlurModal extends StatelessWidget {
       isScrollControlled: true,
       builder: (context) => SafeArea(
         child: Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
           child: BlurModal(child: child),
         ),
       ),

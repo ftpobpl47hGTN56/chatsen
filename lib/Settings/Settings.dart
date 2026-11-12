@@ -9,18 +9,25 @@ class Settings extends Bloc<SettingsEvent, SettingsState> {
 
   Settings(this.settingsBox) : super(SettingsLoading()) {
     on<SettingsLoad>((event, emit) {
+      // DearKing mod: чтение с проверкой типов — испорченное значение больше не вешает запуск
+      bool b(String k, bool d) {
+        final v = settingsBox.get(k);
+        return v is bool ? v : d;
+      }
+
+      final mc = settingsBox.get('mentionCustom');
       emit(SettingsLoaded(
-        setupScreen: settingsBox.get('setupScreen') ?? true,
-        notificationOnWhisper: settingsBox.get('notificationOnWhisper') ?? false,
-        notificationOnMention: settingsBox.get('notificationOnMention') ?? false,
-        notificationBackground: settingsBox.get('notificationBackground') ?? false,
-        messageTimestamp: settingsBox.get('messageTimestamp') ?? false,
-        messageImagePreview: settingsBox.get('messageImagePreview') ?? true,
-        messageLines: settingsBox.get('messageLines') ?? false,
-        messageAlternateBackground: settingsBox.get('messageAlternateBackground') ?? false,
-        mentionCustom: settingsBox.get('mentionCustom') ?? [],
-        historyUseRecentMessages: settingsBox.get('historyUseRecentMessages') ?? true,
-        mentionWithAt: settingsBox.get('mentionWithAt') ?? false,
+        setupScreen: b('setupScreen', true),
+        notificationOnWhisper: b('notificationOnWhisper', false),
+        notificationOnMention: b('notificationOnMention', false),
+        notificationBackground: b('notificationBackground', false),
+        messageTimestamp: b('messageTimestamp', false),
+        messageImagePreview: b('messageImagePreview', true),
+        messageLines: b('messageLines', false),
+        messageAlternateBackground: b('messageAlternateBackground', false),
+        mentionCustom: mc is List ? List<String>.from(mc.map((x) => '$x')) : <String>[],
+        historyUseRecentMessages: b('historyUseRecentMessages', true),
+        mentionWithAt: b('mentionWithAt', false),
       ));
     });
     on<SettingsChange>((event, emit) async {

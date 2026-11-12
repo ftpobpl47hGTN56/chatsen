@@ -82,7 +82,7 @@
 //         backgroundColor: Colors.transparent,
 //         builder: (context) => SafeArea(
 //           child: Padding(
-//             padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+//             padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
 //             child: UpdateModal(
 //               currentVersion: currentReleaseVersion,
 //               latestRelease: lastRelease,

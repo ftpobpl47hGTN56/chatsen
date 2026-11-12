@@ -335,25 +335,33 @@ class ChatMessage extends StatelessWidget {
     for (var token in message.tokens) {
       switch (token.type) {
         case twitch.MessageTokenType.Text:
-          final word = '${token.data}';
-          final mention = RegExp(r'^@([A-Za-z0-9_]{2,25})[,.:!?]*$').firstMatch(word);
-          // в ответе Twitch сам ставит «@ник» в начало — он уже показан в шапке ответа
-          if (mention != null && spans.isEmpty && message.replyParentLogin != null && mention.group(1)!.toLowerCase() == message.replyParentLogin!.toLowerCase()) {
-            break;
+          // Библиотека склеивает соседние слова в один токен («@ник [дата] текст»),
+          // поэтому упоминания ищем по словам, а обычные слова собираем обратно в один кусок.
+          final plainStyle = TextStyle(color: (message.user == null || message.action) ? color : null, shadows: shadows);
+          final buffer = StringBuffer();
+          void flush() {
+            if (buffer.isEmpty) return;
+            spans.add(TextSpan(text: buffer.toString(), style: plainStyle));
+            buffer.clear();
           }
-          if (mention != null) {
+
+          final words = '${token.data}'.split(' ');
+          for (var w = 0; w < words.length; w++) {
+            final word = words[w];
+            final mention = RegExp(r'^@([A-Za-z0-9_]{2,25})[,.:!?]*$').firstMatch(word);
+            if (mention == null) {
+              buffer.write('$word ');
+              continue;
+            }
+            // в ответе Twitch сам ставит «@ник» первым словом — он уже показан в шапке ответа
+            final isFirstWord = identical(token, message.tokens.first) && w == 0;
+            if (isFirstWord && message.replyParentLogin != null && mention.group(1)!.toLowerCase() == message.replyParentLogin!.toLowerCase()) {
+              continue;
+            }
+            flush();
             spans.add(_mentionSpan(context, word, mention.group(1)!, shadows));
-            break;
           }
-          spans.add(
-            TextSpan(
-              text: '$word ',
-              style: TextStyle(
-                color: (message.user == null || message.action) ? color : null,
-                shadows: shadows,
-              ),
-            ),
-          );
+          flush();
           break;
         // DearKing mod: ссылка всегда остаётся текстом (тап — открыть, удержание — меню сообщения),
         // а под ней, если включено «Превью медиа», — картинка/GIF/видео или карточка страницы.

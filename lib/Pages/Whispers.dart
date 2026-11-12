@@ -105,8 +105,7 @@ class _WhispersPageState extends State<WhispersPage>
                               builder: (context) => SafeArea(
                                 child: Padding(
                                   padding: EdgeInsets.only(
-                                      bottom: MediaQuery.of(context)
-                                          .viewInsets
+                                      bottom: MediaQuery.viewInsetsOf(context)
                                           .bottom),
                                   child: WhisperJoinModal(
                                     client: widget.client,

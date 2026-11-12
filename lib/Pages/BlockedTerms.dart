@@ -65,7 +65,7 @@ class _BlockedTermsPageState extends State<BlockedTermsPage> {
                   child: SizedBox(
                     height: 128.0 * 1.5,
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 24.0) + EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+                      padding: EdgeInsets.symmetric(horizontal: 24.0) + EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -96,10 +96,10 @@ class _BlockedTermsPageState extends State<BlockedTermsPage> {
                   // pinned: true,
                   floating: true,
                   delegate: CustomSliverAppBarDelegate(
-                    minHeight: 64.0 + MediaQuery.of(context).padding.top,
-                    maxHeight: 64.0 + MediaQuery.of(context).padding.top,
+                    minHeight: 64.0 + MediaQuery.paddingOf(context).top,
+                    maxHeight: 64.0 + MediaQuery.paddingOf(context).top,
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0) + EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+                      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0) + EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
                       child: Material(
                         borderRadius: BorderRadius.circular(64.0),
                         color: Theme.of(context).colorScheme.surface,

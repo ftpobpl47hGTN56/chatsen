@@ -475,7 +475,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   for (var entry in entryGroup.value) entry,
                 ],
-                SizedBox(height: MediaQuery.of(context).padding.bottom),
+                SizedBox(height: MediaQuery.paddingOf(context).bottom),
               ];
 
               return CustomScrollView(
@@ -484,7 +484,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     child: SizedBox(
                       height: 128.0 * 1.5,
                       child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16.0) + EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+                        padding: EdgeInsets.symmetric(horizontal: 16.0) + EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -549,10 +549,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     // pinned: true,
                     floating: true,
                     delegate: CustomSliverAppBarDelegate(
-                      minHeight: 64.0 + MediaQuery.of(context).padding.top,
-                      maxHeight: 64.0 + MediaQuery.of(context).padding.top,
+                      minHeight: 64.0 + MediaQuery.paddingOf(context).top,
+                      maxHeight: 64.0 + MediaQuery.paddingOf(context).top,
                       child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0) + EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+                        padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0) + EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
                         child: Material(
                           borderRadius: BorderRadius.circular(64.0),
                           color: Theme.of(context).colorScheme.surface,

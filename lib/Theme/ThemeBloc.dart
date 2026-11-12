@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'ThemeManager.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive/hive.dart';
 
@@ -19,10 +20,11 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
       var themeMode = themeBox.get('themeMode');
       var themeColorScheme = themeBox.get('themeColorScheme');
       var themeHighContrast = themeBox.get('themeHighContrast');
+      // DearKing mod: проверка типов и диапазона — испорченные данные не должны вешать запуск
       emit(ThemeLoaded(
-        mode: themeMode != null ? ThemeMode.values[themeMode] : mode,
-        highContrast: themeHighContrast ?? false,
-        colorScheme: themeColorScheme ?? colorScheme,
+        mode: (themeMode is int && themeMode >= 0 && themeMode < ThemeMode.values.length) ? ThemeMode.values[themeMode] : mode,
+        highContrast: themeHighContrast == true,
+        colorScheme: (themeColorScheme is String && ThemeManager.colors.containsKey(themeColorScheme)) ? themeColorScheme : colorScheme,
       ));
     });
     on<ThemeModeChanged>((event, emit) async {

@@ -64,10 +64,38 @@ class ThemeManager {
               ? (highContrast ? Color.fromARGB(255, 16, 16, 16) : Colors.grey[850])
               : baseColorScheme.surface),
     );
+    // DearKing mod: все поверхности (шторки, диалоги, карточки, меню) — оттенки фона, чуть светлее.
+    // Новые версии Flutter заполняют их в fromSwatch серым, из-за чего окна были серыми на любом фоне.
+    final base = background ?? colorScheme.surface;
+    final towards = brightness == Brightness.dark ? Colors.white : Colors.black;
+    Color step(double t) => Color.lerp(base, towards, t)!;
+    if (background != null) {
+      colorScheme = colorScheme.copyWith(
+        surface: step(0.07),
+        surfaceDim: step(0.03),
+        surfaceBright: step(0.14),
+        surfaceContainerLowest: step(0.04),
+        surfaceContainerLow: step(0.07),
+        surfaceContainer: step(0.09),
+        surfaceContainerHigh: step(0.12),
+        surfaceContainerHighest: step(0.15),
+        surfaceTint: Colors.transparent, // без фиолетово-серого налёта на приподнятых панелях
+      );
+    }
     var themeData = ThemeData.from(colorScheme: colorScheme).copyWith(
       scaffoldBackgroundColor: colorScheme.background,
     );
-    if (background != null) themeData = themeData.copyWith(canvasColor: background);
+    if (background != null) {
+      themeData = themeData.copyWith(
+        canvasColor: background,
+        cardColor: step(0.09),
+        dialogTheme: themeData.dialogTheme.copyWith(backgroundColor: step(0.12)),
+        bottomSheetTheme: themeData.bottomSheetTheme.copyWith(backgroundColor: step(0.08), modalBackgroundColor: step(0.08)),
+        popupMenuTheme: themeData.popupMenuTheme.copyWith(color: step(0.12)),
+        cardTheme: themeData.cardTheme.copyWith(color: step(0.09)),
+        snackBarTheme: themeData.snackBarTheme.copyWith(backgroundColor: step(0.18)),
+      );
+    }
     if (accentBorders) themeData = _withAccentBorders(themeData);
     return themeData.copyWith(
       floatingActionButtonTheme: FloatingActionButtonThemeData(

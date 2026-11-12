@@ -242,7 +242,7 @@ class _ChannelJoinModalState extends State<ChannelJoinModal> {
     final extraSearch = searchResults.where((c) => !followLogins.contains(c.login)).toList();
 
     return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.75,
+      height: MediaQuery.sizeOf(context).height * 0.75,
       child: Column(
         children: [
           Padding(
