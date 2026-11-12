@@ -70,6 +70,65 @@ class UserPrefs extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Последний выбранный хостинг для загрузки файлов.
+  String get uploadHost => (_mod?.get('uploadHost') as String?) ?? 'kappa';
+  Future<void> setUploadHost(String v) async => _mod?.put('uploadHost', v);
+
+  /// Автосохранение настроек в файл (Загрузки/ChatsenMod). По умолчанию включено.
+  bool get autoBackup => (_mod?.get('autoBackup') as bool?) ?? true;
+  Future<void> setAutoBackup(bool v) async {
+    await _mod?.put('autoBackup', v);
+    notifyListeners();
+  }
+
+  /// Путь и время последнего автосохранения — показываем в настройках.
+  String? get lastBackupPath => _mod?.get('lastBackupPath') as String?;
+  DateTime? get lastBackupTime {
+    final v = _mod?.get('lastBackupTime') as int?;
+    return v == null ? null : DateTime.fromMillisecondsSinceEpoch(v);
+  }
+
+  Future<void> markBackup(String path) async {
+    await _mod?.put('lastBackupPath', path);
+    await _mod?.put('lastBackupTime', DateTime.now().millisecondsSinceEpoch);
+  }
+
+  /// Первый запуск после установки: предложить восстановление один раз.
+  bool get restoreOffered => (_mod?.get('restoreOffered') as bool?) ?? false;
+  Future<void> setRestoreOffered() async => _mod?.put('restoreOffered', true);
+
+  /// Всё, что хранит мод (для экспорта/импорта).
+  Map<String, dynamic> exportMod() => {
+        'mod': {for (final k in _mod?.keys ?? const []) '$k': _mod!.get(k)}..removeWhere((k, _) => k.startsWith('lastBackup') || k == 'restoreOffered'),
+        'ignored': [for (final k in _ignored?.keys ?? const []) '$k'],
+        'aliases': {for (final k in _aliases?.keys ?? const []) '$k': _aliases!.get(k)},
+      };
+
+  Future<void> importMod(Map data) async {
+    final mod = data['mod'];
+    if (mod is Map) {
+      for (final e in mod.entries) {
+        await _mod?.put(e.key, e.value);
+      }
+    }
+    final ignored = data['ignored'];
+    if (ignored is List) {
+      await _ignored?.clear();
+      for (final l in ignored) {
+        await _ignored?.put('$l'.toLowerCase(), true);
+      }
+    }
+    final aliases = data['aliases'];
+    if (aliases is Map) {
+      await _aliases?.clear();
+      for (final e in aliases.entries) {
+        await _aliases?.put('${e.key}'.toLowerCase(), '${e.value}');
+      }
+    }
+    appearance.value++;
+    notifyListeners();
+  }
+
   /// Цвет фона (ARGB) или null — стандартная тема.
   Color? get background {
     final v = _mod?.get('bgColor') as int?;

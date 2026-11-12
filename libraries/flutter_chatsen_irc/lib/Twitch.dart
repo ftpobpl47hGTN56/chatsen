@@ -298,8 +298,13 @@ class Message {
       var lowSplit = messageSplit.toLowerCase();
 
       if (lowSplit.startsWith('http://') || lowSplit.startsWith('https://')) {
-        if (lowSplit.endsWith('.png') || lowSplit.endsWith('.jpg') || lowSplit.endsWith('.jpeg') || lowSplit.endsWith('.apng') || lowSplit.endsWith('.gif') || lowSplit.endsWith('.webp')) {
+        // DearKing mod: расширение берём из пути, без ?query/#hash (cdn.discordapp.com/...png?ex=...)
+        final path = (Uri.tryParse(messageSplit)?.path ?? lowSplit).toLowerCase();
+        final ext = path.contains('.') ? path.substring(path.lastIndexOf('.') + 1) : '';
+        if (const ['png', 'jpg', 'jpeg', 'apng', 'gif', 'webp', 'avif', 'bmp'].contains(ext)) {
           tokens.add(MessageToken.image(messageSplit));
+        } else if (const ['mp4', 'webm', 'mov', 'm4v', 'gifv'].contains(ext)) {
+          tokens.add(MessageToken.video(messageSplit));
         } else {
           tokens.add(MessageToken.link(messageSplit));
         }

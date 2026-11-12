@@ -22,7 +22,7 @@ Map<String, dynamic> buildExportData({
       'notificationBackground': settingsBox.get('notificationBackground') ?? false,
       'mentionCustom': settingsBox.get('mentionCustom') ?? <String>[],
       'messageTimestamp': settingsBox.get('messageTimestamp') ?? false,
-      'messageImagePreview': settingsBox.get('messageImagePreview') ?? false,
+      'messageImagePreview': settingsBox.get('messageImagePreview') ?? true,
       'messageLines': settingsBox.get('messageLines') ?? false,
       'messageAlternateBackground': settingsBox.get('messageAlternateBackground') ?? false,
       'historyUseRecentMessages': settingsBox.get('historyUseRecentMessages') ?? true,

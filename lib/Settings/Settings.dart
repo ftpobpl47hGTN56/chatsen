@@ -15,7 +15,7 @@ class Settings extends Bloc<SettingsEvent, SettingsState> {
         notificationOnMention: settingsBox.get('notificationOnMention') ?? false,
         notificationBackground: settingsBox.get('notificationBackground') ?? false,
         messageTimestamp: settingsBox.get('messageTimestamp') ?? false,
-        messageImagePreview: settingsBox.get('messageImagePreview') ?? false,
+        messageImagePreview: settingsBox.get('messageImagePreview') ?? true,
         messageLines: settingsBox.get('messageLines') ?? false,
         messageAlternateBackground: settingsBox.get('messageAlternateBackground') ?? false,
         mentionCustom: settingsBox.get('mentionCustom') ?? [],

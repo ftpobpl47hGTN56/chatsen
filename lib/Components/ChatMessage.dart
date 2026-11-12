@@ -26,6 +26,7 @@ import 'ChatInputBox.dart';
 import 'UserCard.dart';
 import 'EmotePopup.dart';
 import 'UserPrefs.dart';
+import 'MediaPreview.dart';
 import 'UI/NetworkImageWrapper.dart';
 
 /// [ChatMessage] is a Widget that takes a [twitch.Message] and renders into something readable and interactable.
@@ -172,6 +173,8 @@ class ChatMessage extends StatelessWidget {
     }
     var color = getUserColor(context, Color(int.tryParse(message.user?.color ?? '777777', radix: 16) ?? 0x777777).withAlpha(255));
     var spans = <InlineSpan>[];
+    // ссылки, под которыми показываем превью медиа
+    final previews = <String>[];
     var shadowSpread = 1.0;
     var shadowColor = Theme.of(context).colorScheme.surface;
     var shadows = shadow
@@ -200,67 +203,31 @@ class ChatMessage extends StatelessWidget {
             ),
           );
           break;
+        // DearKing mod: ссылка всегда остаётся текстом (тап — открыть, удержание — меню сообщения),
+        // а под ней, если включено «Превью медиа», — картинка/GIF/видео или карточка страницы.
         case twitch.MessageTokenType.Link:
+        case twitch.MessageTokenType.Image:
+        case twitch.MessageTokenType.Video:
+          final linkUrl = '${token.data}';
           spans.add(
             TextSpan(
               children: [
                 TextSpan(
-                  text: '${token.data}',
+                  text: linkUrl,
                   style: TextStyle(
                     color: Colors.blue,
                     decoration: TextDecoration.underline,
                     shadows: shadows,
                   ),
-                  recognizer: TapGestureRecognizer()
-                    ..onTap = () async {
-                      await launchUrl(Uri.parse(token.data));
-                    },
+                  recognizer: TapGestureRecognizer()..onTap = () => launchUrl(Uri.parse(linkUrl), mode: LaunchMode.externalApplication),
                 ),
                 TextSpan(text: ' '),
               ],
             ),
           );
-          break;
-        case twitch.MessageTokenType.Image:
-          if (!(BlocProvider.of<Settings>(context).state as SettingsLoaded).messageImagePreview) {
-            spans.add(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: '${token.data}',
-                    style: TextStyle(
-                      color: Colors.blue,
-                      decoration: TextDecoration.underline,
-                      shadows: shadows,
-                    ),
-                    recognizer: TapGestureRecognizer()..onTap = () async => launchUrl(Uri.parse(token.data)),
-                  ),
-                  TextSpan(text: ' '),
-                ],
-              ),
-            );
-            break;
+          if ((BlocProvider.of<Settings>(context).state as SettingsLoaded).messageImagePreview) {
+            previews.add(linkUrl);
           }
-
-          spans.add(
-            TextSpan(
-              children: [
-                TextSpan(text: '\n'),
-                WidgetSpan(
-                  child: Padding(
-                    padding: const EdgeInsets.all(2.0),
-                    child: InkWell(
-                      onTap: () async => launchUrl(Uri.parse(token.data)), //'https://cdn.imgproxify.com/image?url=${Uri.encodeComponent(token.data)}'),
-                      child: NetworkImageW(Uri.parse(token.data).toString()), //'https://cdn.imgproxify.com/image?url=${Uri.encodeComponent(token.data)}'),
-                    ),
-                  ),
-                ),
-                TextSpan(text: '\n'),
-              ],
-            ),
-          );
-          break;
-        case twitch.MessageTokenType.Video:
           break;
         case twitch.MessageTokenType.Emote:
           if (!kUnverifiedVersion) {
@@ -452,7 +419,130 @@ class ChatMessage extends StatelessWidget {
           // onLongPress: () async => await Clipboard.setData(ClipboardData(text: message.body ?? '')),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 8.0),
-            child: Text.rich(
+            child: previews.isEmpty
+                ? Text.rich(
+              TextSpan(
+                children: <InlineSpan>[
+                      if (prefixText != null)
+                        TextSpan(
+                          text: '$prefixText ',
+                          style: TextStyle(
+                            fontStyle: FontStyle.italic,
+                            shadows: shadows,
+                          ),
+                        ),
+                      if ((BlocProvider.of<Settings>(context).state as SettingsLoaded).messageTimestamp)
+                        TextSpan(
+                          text: '${message.dateTime!.hour.toString().padLeft(2, '0')}:${message.dateTime!.minute.toString().padLeft(2, '0')} ',
+                          style: TextStyle(
+                            // fontWeight: FontWeight.bold,
+                            shadows: shadows,
+                            color: Colors.grey[400],
+                          ),
+                        ),
+                      // if (first != null)
+                      //   for (var badge in first.badges)
+                      //     WidgetSpan(
+                      //       child: Padding(
+                      //         padding: const EdgeInsets.only(right: 4.0),
+                      //         child: NetworkImageW(
+                      //           data!.badges.firstWhere((element) => element.name == badge.badgeName).image,
+                      //           height: 18.0,
+                      //         ),
+                      //       ),
+                      //     ),
+                      if (message.user != null)
+                        // Good god chatsen2 will need something better than this
+                        for (var badge in [
+                          ...message.badges,
+                          ...BlocProvider.of<BTTVBadges>(context).getBadgesForUser('${message.user?.id}'),
+                          ...BlocProvider.of<FFZBadges>(context).getBadgesForUser('${message.user?.login?.toLowerCase()}'),
+                          ...BlocProvider.of<FFZAPBadges>(context).getBadgesForUser('${message.user?.id}'),
+                          ...BlocProvider.of<ChatterinoBadges>(context).getBadgesForUser('${message.user?.id}'),
+                          ...BlocProvider.of<DankChatBadges>(context).getBadgesForUser('${message.user?.id}'),
+                          ...BlocProvider.of<ChattyBadges>(context).getBadgesForUser('${message.user?.login}'),
+                          ...BlocProvider.of<SevenTVBadges>(context).getBadgesForUser('${message.user?.id}'),
+                          ...BlocProvider.of<ChatsenBadges>(context).getBadgesForUser('${message.user?.id}'),
+                          ...BlocProvider.of<Chatsen2Badges>(context).getBadgesForUser('${message.user?.id}'),
+                        ])
+                          WidgetSpan(
+                            child: WidgetTooltip(
+                              message: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 4.0),
+                                      child: ClipRRect(
+                                        borderRadius: badge.color != null ? BorderRadius.circular(96.0 / 8.0) : BorderRadius.zero,
+                                        child: Container(
+                                          color: badge.color != null ? Color(int.tryParse(badge.color ?? '777777', radix: 16) ?? 0x777777).withAlpha(255) : null,
+                                          child: badge.mipmap!.last!.endsWith('.svg')
+                                              ? SvgPicture.network(
+                                                  badge.mipmap!.last!,
+                                                  height: 96.0,
+                                                  fit: BoxFit.fitHeight,
+                                                )
+                                              : NetworkImageW(
+                                                  badge.mipmap!.last!,
+                                                  height: 96.0,
+                                                  fit: BoxFit.fitHeight,
+                                                  cache: badge.cache,
+                                                ),
+                                        ),
+                                      ),
+                                    ),
+                                    Text('${badge.title}'),
+                                    if (badge.title != badge.description && badge.description != null) Text('${badge.description}'),
+                                  ],
+                                ),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 4.0),
+                                child: ClipRRect(
+                                  borderRadius: badge.color != null ? BorderRadius.circular(2.0) : BorderRadius.zero,
+                                  child: Container(
+                                    color: badge.color != null ? Color(int.tryParse(badge.color ?? '777777', radix: 16) ?? 0x777777).withAlpha(255) : null,
+                                    child: badge.mipmap!.last!.endsWith('.svg')
+                                        ? SvgPicture.network(
+                                            badge.mipmap!.last!,
+                                            height: 18.0,
+                                          )
+                                        : NetworkImageW(
+                                            badge.mipmap!.last!,
+                                            height: 18.0,
+                                            fit: BoxFit.fitHeight,
+                                            cache: badge.cache,
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      if (message.user != null)
+                        TextSpan(
+                          // локальное имя (Rename) показываем вместо ника, оригинальный логин — в скобках
+                          text: (UserPrefs.instance.aliasOf(message.user!.login) != null
+                                  ? '${UserPrefs.instance.aliasOf(message.user!.login)} (${message.user!.login})'
+                                  : '${message.user!.displayName}' + (message.user!.displayName!.toLowerCase() != message.user!.login!.toLowerCase() ? ' (${message.user!.login})' : '')) +
+                              (message.action ? ' ' : ': '),
+                          style: TextStyle(
+                            color: color,
+                            fontWeight: FontWeight.bold,
+                            shadows: shadows,
+                          ),
+                          recognizer: TapGestureRecognizer()..onTap = () => UserCard.show(context, login: message.user!.login!, channel: message.channel),
+                        ),
+                    ] +
+                    spans,
+              ),
+            )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text.rich(
               TextSpan(
                 children: <InlineSpan>[
                       if (prefixText != null)
@@ -570,6 +660,9 @@ class ChatMessage extends StatelessWidget {
                     spans,
               ),
             ),
+                      for (final url in previews) MediaPreview(key: ValueKey(url), url: url),
+                    ],
+                  ),
           ),
         ),
       ),

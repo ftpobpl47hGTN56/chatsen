@@ -35,6 +35,7 @@ import 'Commands.dart';
 import 'CustomMentions.dart';
 import '/Components/UserPrefs.dart';
 import '/Components/AppearanceSettings.dart';
+import '/Components/Backup.dart';
 
 class SettingsEntry extends StatelessWidget {
   final String? category;
@@ -216,8 +217,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 SettingsEntry(
                   category: tr('Message', 'Сообщения'),
-                  title: tr('Show image previews', 'Превью картинок'),
-                  description: tr('Replaces image links with the images themselves', 'Показывать картинку вместо ссылки на неё'),
+                  title: tr('Media previews', 'Превью медиа'),
+                  description: tr('Show images, GIFs, videos and link cards under messages', 'Картинки, GIF, видео и карточки ссылок под сообщениями'),
                   builder: (context, category, title, description) => Tile(
                     title: title,
                     subtitle: description,
@@ -335,10 +336,62 @@ class _SettingsPageState extends State<SettingsPage> {
                       subtitle: description,
                       onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => CommandsPage()))),
                 ),
+                // DearKing mod: резервная копия
                 SettingsEntry(
-                  category: tr('About', 'О приложении'),
-                  title: tr('Export data', 'Экспорт данных'),
-                  description: tr('Copy all settings and accounts to clipboard as JSON', 'Скопировать все настройки и аккаунты в буфер (JSON)'),
+                  category: tr('Backup', 'Резервная копия'),
+                  title: tr('Auto-save settings', 'Автосохранение настроек'),
+                  description: tr('Saved to Downloads/ChatsenMod when the app is minimized (without login)', 'Сохраняется в Загрузки/ChatsenMod при сворачивании (без данных входа)'),
+                  builder: (context, category, title, description) => AnimatedBuilder(
+                    animation: UserPrefs.instance,
+                    builder: (context, _) {
+                      final t = UserPrefs.instance.lastBackupTime;
+                      final p = UserPrefs.instance.lastBackupPath;
+                      final last = t == null
+                          ? ''
+                          : '\n' + tr('Last: ', 'Последнее: ') + '${t.day.toString().padLeft(2, '0')}.${t.month.toString().padLeft(2, '0')} ${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}' + (p == null ? '' : ' · ${p.split('/').last}');
+                      return Tile(
+                        leading: const Padding(padding: EdgeInsets.all(8.0), child: Icon(Icons.save_outlined)),
+                        title: title,
+                        subtitle: '$description$last',
+                        onTap: () => UserPrefs.instance.setAutoBackup(!UserPrefs.instance.autoBackup),
+                        trailing: Switch.adaptive(
+                          activeColor: Theme.of(context).colorScheme.primary,
+                          value: UserPrefs.instance.autoBackup,
+                          onChanged: (v) async {
+                            await UserPrefs.instance.setAutoBackup(v);
+                            if (v) await Backup.autoSave();
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                SettingsEntry(
+                  category: tr('Backup', 'Резервная копия'),
+                  title: tr('Export to file', 'Экспорт в файл'),
+                  description: tr('Save all settings, ignore list and nicknames to a .json file', 'Все настройки, игнор и локальные имена в файл .json'),
+                  builder: (context, category, title, description) => Tile(
+                    leading: const Padding(padding: EdgeInsets.all(8.0), child: Icon(Icons.file_upload_outlined)),
+                    title: title,
+                    subtitle: description,
+                    onTap: () => Backup.exportToFile(context),
+                  ),
+                ),
+                SettingsEntry(
+                  category: tr('Backup', 'Резервная копия'),
+                  title: tr('Import from file', 'Импорт из файла'),
+                  description: tr('Restore settings from a backup file', 'Восстановить настройки из файла копии'),
+                  builder: (context, category, title, description) => Tile(
+                    leading: const Padding(padding: EdgeInsets.all(8.0), child: Icon(Icons.file_download_outlined)),
+                    title: title,
+                    subtitle: description,
+                    onTap: () => Backup.importFromFile(context),
+                  ),
+                ),
+                SettingsEntry(
+                  category: tr('Backup', 'Резервная копия'),
+                  title: tr('Copy to clipboard', 'Копировать в буфер'),
+                  description: tr('Export as JSON text', 'Экспорт текстом JSON'),
                   builder: (context, category, title, description) => Tile(
                     leading: Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -346,26 +399,18 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     title: title,
                     subtitle: description,
-                    onTap: () async {
-                      final json = buildExportJson(
-                        settingsBox: BlocProvider.of<Settings>(context).settingsBox,
-                        themeBox: BlocProvider.of<ThemeBloc>(context).themeBox,
-                        accountsBox: BlocProvider.of<AccountsCubit>(context).accountBox,
-                        commandsBox: BlocProvider.of<CommandsCubit>(context).commandsBox,
-                        customMentionsBox: BlocProvider.of<CustomMentionsCubit>(context).commandsBox,
-                        blockedUsersBox: BlocProvider.of<BlockedUsersCubit>(context).blockedUsersBox,
-                      );
-                      await Clipboard.setData(ClipboardData(text: json));
-
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            behavior: SnackBarBehavior.floating,
-                            content: Text(tr('Data copied to clipboard!', 'Данные скопированы в буфер!')),
-                          ),
-                        );
-                      }
-                    },
+                    onTap: () => Backup.exportToClipboard(context),
+                  ),
+                ),
+                SettingsEntry(
+                  category: tr('Backup', 'Резервная копия'),
+                  title: tr('Import from clipboard', 'Импорт из буфера'),
+                  description: tr('Paste JSON copied earlier', 'Вставить скопированный ранее JSON'),
+                  builder: (context, category, title, description) => Tile(
+                    leading: const Padding(padding: EdgeInsets.all(8.0), child: Icon(Icons.content_paste)),
+                    title: title,
+                    subtitle: description,
+                    onTap: () => Backup.importFromClipboard(context),
                   ),
                 ),
                 SettingsEntry(

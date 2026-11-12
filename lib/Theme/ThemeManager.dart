@@ -34,6 +34,9 @@ class ThemeManager {
     Color(0xFF221014), // винный
     Color(0xFFEFEFF1), // светло-серый
     Color(0xFFFFFFFF), // белый
+    Color(0xFFF8BBD0), // розовый
+    Color(0xFFBBDEFB), // синий
+    Color(0xFFFFF59D), // жёлтый
   ];
 
   static Brightness brightnessOf(Color c) => c.computeLuminance() > 0.4 ? Brightness.light : Brightness.dark;
