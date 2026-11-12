@@ -299,7 +299,11 @@ class ChatsenActionButton extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       child: Material(
         color: active ? theme.colorScheme.primary : theme.colorScheme.onSurface.withAlpha(20),
-        borderRadius: BorderRadius.circular(14),
+        // рамка акцента — переключатель «Акцентные рамки» в настройках
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: UserPrefs.instance.accentBorders ? BorderSide(color: theme.colorScheme.primary, width: 2) : BorderSide.none,
+        ),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: onTap,

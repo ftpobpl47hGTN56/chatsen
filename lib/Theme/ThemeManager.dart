@@ -42,7 +42,7 @@ class ThemeManager {
   static Brightness brightnessOf(Color c) => c.computeLuminance() > 0.4 ? Brightness.light : Brightness.dark;
 
   static ThemeData buildTheme(Brightness brightness, String color,
-      {bool highContrast = false, Color? background}) {
+      {bool highContrast = false, Color? background, bool accentBorders = false}) {
     if (background != null) brightness = brightnessOf(background);
     var baseColorScheme = brightness == Brightness.light
         ? ColorScheme.light()
@@ -68,6 +68,7 @@ class ThemeManager {
       scaffoldBackgroundColor: colorScheme.background,
     );
     if (background != null) themeData = themeData.copyWith(canvasColor: background);
+    if (accentBorders) themeData = _withAccentBorders(themeData);
     return themeData.copyWith(
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: colorScheme.surface,
@@ -126,6 +127,31 @@ class ThemeManager {
                 : Brightness.light,
       ),
       child: child,
+    );
+  }
+
+  /// DearKing mod: рамка 2px цвета акцента у кнопок, карточек, диалогов, шторок, чипов.
+  static ThemeData _withAccentBorders(ThemeData t) {
+    final side = BorderSide(color: t.colorScheme.primary, width: 2);
+    RoundedRectangleBorder r(double radius) => RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius), side: side);
+    ButtonStyle btn(ButtonStyle? base) => (base ?? const ButtonStyle()).copyWith(
+          side: WidgetStatePropertyAll(side),
+          shape: WidgetStatePropertyAll(r(14)),
+        );
+    return t.copyWith(
+      filledButtonTheme: FilledButtonThemeData(style: btn(t.filledButtonTheme.style)),
+      outlinedButtonTheme: OutlinedButtonThemeData(style: btn(t.outlinedButtonTheme.style)),
+      elevatedButtonTheme: ElevatedButtonThemeData(style: btn(t.elevatedButtonTheme.style)),
+      textButtonTheme: TextButtonThemeData(style: btn(t.textButtonTheme.style)),
+      segmentedButtonTheme: SegmentedButtonThemeData(style: (t.segmentedButtonTheme.style ?? const ButtonStyle()).copyWith(side: WidgetStatePropertyAll(side))),
+      cardTheme: t.cardTheme.copyWith(shape: r(12)),
+      dialogTheme: t.dialogTheme.copyWith(shape: r(20)),
+      bottomSheetTheme: t.bottomSheetTheme.copyWith(
+        shape: RoundedRectangleBorder(borderRadius: const BorderRadius.vertical(top: Radius.circular(20)), side: side),
+      ),
+      popupMenuTheme: t.popupMenuTheme.copyWith(shape: r(12)),
+      chipTheme: t.chipTheme.copyWith(side: side),
+      snackBarTheme: t.snackBarTheme.copyWith(shape: r(12)),
     );
   }
 }

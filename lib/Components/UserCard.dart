@@ -14,6 +14,7 @@ import 'ChatInputBox.dart';
 import 'EmotePopup.dart' show ChatsenActionButton;
 import 'UI/NetworkImageWrapper.dart';
 import 'UserPrefs.dart';
+import 'AppearanceSettings.dart' show ColorPickerDialog;
 
 /// Карточка профиля пользователя (bottom sheet).
 /// Открывается тапом по нику в чате, тапом по @упоминанию и из списка юзеров.
@@ -298,6 +299,25 @@ class _UserCardState extends State<UserCard> {
           // Ряд 2 — управление
           Row(
             children: [
+              Expanded(
+                child: ChatsenActionButton(
+                  icon: Icons.palette_outlined,
+                  label: tr('Color', 'Цвет'),
+                  // кнопка окрашена в текущий свой цвет ника
+                  color: prefs.userColor(login),
+                  onTap: () async {
+                    final picked = await ColorPickerDialog.show(
+                      context,
+                      initial: prefs.userColor(login) ?? theme.colorScheme.primary,
+                      title: tr('Nickname color', 'Цвет ника'),
+                      sample: alias ?? display,
+                      allowReset: prefs.userColor(login) != null,
+                    );
+                    if (picked == null) return;
+                    await prefs.setUserColor(login, picked == ColorPickerDialog.reset ? null : picked);
+                  },
+                ),
+              ),
               Expanded(
                 child: ChatsenActionButton(
                   icon: Icons.drive_file_rename_outline,

@@ -43,8 +43,8 @@ class HomeDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) => WidgetBlur(
         child: Material(
-          // без размытия полупрозрачный фон сливается с чатом — делаем почти непрозрачным
-          color: Theme.of(context).canvasColor.withAlpha(UserPrefs.instance.blur ? 196 : 245),
+          // полупрозрачность — отдельный переключатель в настройках (по умолчанию сплошной фон)
+          color: Theme.of(context).canvasColor.withAlpha(UserPrefs.instance.panelAlpha(196)),
           child: Stack(
             children: [
               SafeArea(

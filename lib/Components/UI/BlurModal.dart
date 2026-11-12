@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '/Components/UI/WidgetBlur.dart';
+import '/Components/UserPrefs.dart';
 
 /// [BlurModal] is a helper class that allows to easily create stylized transparent and blurred modals
 class BlurModal extends StatelessWidget {
@@ -13,7 +14,7 @@ class BlurModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) => WidgetBlur(
         child: Material(
-          color: Theme.of(context).colorScheme.surface.withAlpha(196),
+          color: Theme.of(context).colorScheme.surface.withAlpha(UserPrefs.instance.panelAlpha(196)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

@@ -19,7 +19,7 @@ class HomeEndDrawer extends StatelessWidget {
         builder: (context, state) {
           return WidgetBlur(
             child: Material(
-              color: Theme.of(context).canvasColor.withAlpha(196),
+              color: Theme.of(context).canvasColor.withAlpha(UserPrefs.instance.panelAlpha(196)),
               child: Stack(
                 children: [
                   Row(

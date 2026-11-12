@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import '/Components/UI/WidgetBlur.dart';
+import '/Components/UserPrefs.dart';
 
 class WidgetTooltip extends StatefulWidget {
   /// Creates a tooltip.
@@ -525,7 +526,7 @@ class _TooltipOverlay extends StatelessWidget {
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minHeight: height!),
                   child: Container(
-                    color: Theme.of(context).cardColor.withAlpha(196),
+                    color: Theme.of(context).cardColor.withAlpha(UserPrefs.instance.panelAlpha(196)),
                     padding: padding,
                     margin: margin,
                     child: Center(

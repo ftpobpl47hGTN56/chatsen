@@ -97,6 +97,12 @@ class _SettingsPageState extends State<SettingsPage> {
                   builder: (context, category, title, description) => const AppearancePicker(),
                 ),
                 SettingsEntry(
+                  category: tr('Theme', 'Тема'),
+                  title: tr('Accent outlines', 'Акцентные рамки'),
+                  description: tr('Translucent panels', 'Полупрозрачные панели'),
+                  builder: (context, category, title, description) => const PanelSwitches(),
+                ),
+                SettingsEntry(
                   category: tr('Setup', 'Первый запуск'),
                   title: tr('Setup screen', 'Экран настройки'),
                   description: tr('Show the setup screen next startup', 'Показать экран первичной настройки при следующем запуске'),
@@ -246,6 +252,18 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 // for (var i = 0; i < 10; ++i)
+                SettingsEntry(
+                  category: tr('Message', 'Сообщения'),
+                  title: tr('Mention style', 'Стиль упоминаний'),
+                  description: tr('Font, color, background, outline of @mentions', 'Шрифт, цвет, фон и рамка @упоминаний'),
+                  builder: (context, category, title, description) => const MentionStylePicker(),
+                ),
+                SettingsEntry(
+                  category: tr('Message', 'Сообщения'),
+                  title: tr('Badges next to nicknames', 'Значки у ника'),
+                  description: tr('Show, roles only or hide badges', 'Все, только роли или скрыть значки'),
+                  builder: (context, category, title, description) => const BadgeModePicker(),
+                ),
                 SettingsEntry(
                   category: tr('Message', 'Сообщения'),
                   title: tr('Alternate background color', 'Чередование фона'),

@@ -21,6 +21,7 @@ class UserPrefs extends ChangeNotifier {
   Box? _ignored;
   Box? _aliases;
   Box? _mod;
+  Box? _colors;
 
   /// id сообщений игнорируемых юзеров, которые пользователь раскрыл тапом.
   final Set<String> revealed = {};
@@ -29,6 +30,58 @@ class UserPrefs extends ChangeNotifier {
     _ignored = await Hive.openBox('IgnoredUsers');
     _aliases = await Hive.openBox('UserAliases');
     _mod = await Hive.openBox('ModSettings');
+    _colors = await Hive.openBox('UserColors');
+  }
+
+  // ---------- вид чата ----------
+
+  /// Значки у ника: 0 — все, 1 — только роли (стример/мод/VIP/саб), 2 — скрыть все.
+  int get badgeMode => (_mod?.get('badgeMode') as int?) ?? 0;
+  Future<void> setBadgeMode(int v) async {
+    await _mod?.put('badgeMode', v);
+    notifyListeners();
+  }
+
+  /// Стиль @упоминаний в тексте: 0 обычный, 1 акцент, 2 плашка, 3 рамка, 4 цвет ника.
+  int get mentionStyle => (_mod?.get('mentionStyle') as int?) ?? 1;
+  Future<void> setMentionStyle(int v) async {
+    await _mod?.put('mentionStyle', v);
+    notifyListeners();
+  }
+
+  /// Рамка 2px цвета акцента у кнопок и окон.
+  bool get accentBorders => (_mod?.get('accentBorders') as bool?) ?? false;
+  Future<void> setAccentBorders(bool v) async {
+    await _mod?.put('accentBorders', v);
+    appearance.value++;
+    notifyListeners();
+  }
+
+  /// Полупрозрачные панели (шторка, нижние карточки). По умолчанию выключено — сплошной фон.
+  bool get translucent => (_mod?.get('translucent') as bool?) ?? false;
+  Future<void> setTranslucent(bool v) async {
+    await _mod?.put('translucent', v);
+    appearance.value++;
+    notifyListeners();
+  }
+
+  /// Своя альфа для панели: сплошная, если полупрозрачность выключена.
+  int panelAlpha(int translucentAlpha) => translucent ? translucentAlpha : 255;
+
+  /// Локальный цвет ника для юзера (выбран в карточке), или null.
+  Color? userColor(String? login) {
+    if (login == null) return null;
+    final v = _colors?.get(login.toLowerCase()) as int?;
+    return v == null ? null : Color(v);
+  }
+
+  Future<void> setUserColor(String login, Color? c) async {
+    if (c == null) {
+      await _colors?.delete(login.toLowerCase());
+    } else {
+      await _colors?.put(login.toLowerCase(), c.toARGB32());
+    }
+    notifyListeners();
   }
 
   // ---------- производительность ----------
@@ -106,6 +159,7 @@ class UserPrefs extends ChangeNotifier {
         'mod': {for (final k in _mod?.keys ?? const []) '$k': _mod!.get(k)}..removeWhere((k, _) => k.startsWith('lastBackup') || k == 'restoreOffered'),
         'ignored': [for (final k in _ignored?.keys ?? const []) '$k'],
         'aliases': {for (final k in _aliases?.keys ?? const []) '$k': _aliases!.get(k)},
+        'userColors': {for (final k in _colors?.keys ?? const []) '$k': _colors!.get(k)},
       };
 
   Future<void> importMod(Map data) async {
@@ -127,6 +181,13 @@ class UserPrefs extends ChangeNotifier {
       await _aliases?.clear();
       for (final e in aliases.entries) {
         await _aliases?.put('${e.key}'.toLowerCase(), '${e.value}');
+      }
+    }
+    final colors = data['userColors'];
+    if (colors is Map) {
+      await _colors?.clear();
+      for (final e in colors.entries) {
+        if (e.value is int) await _colors?.put('${e.key}'.toLowerCase(), e.value);
       }
     }
     appearance.value++;

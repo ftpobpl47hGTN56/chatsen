@@ -145,7 +145,7 @@ class _ChatViewState extends State<ChatView> implements twitch.Listener {
         if ((Platform.isMacOS ? 0.0 : MediaQuery.of(context).padding.top) > 0.0 && (MediaQuery.of(context).size.aspectRatio > 1.0 ? true : BlocProvider.of<StreamOverlayBloc>(context).state is StreamOverlayClosed))
           WidgetBlur(
             child: Material(
-              color: Theme.of(context).canvasColor.withAlpha(196),
+              color: Theme.of(context).canvasColor.withAlpha(UserPrefs.instance.panelAlpha(196)),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -172,7 +172,7 @@ class _ChatViewState extends State<ChatView> implements twitch.Listener {
                   child: WidgetBlur(
                     borderRadius: BorderRadius.circular(32.0),
                     child: Material(
-                      color: Theme.of(context).colorScheme.surface.withAlpha(196),
+                      color: Theme.of(context).colorScheme.surface.withAlpha(UserPrefs.instance.panelAlpha(196)),
                       child: Container(
                         clipBehavior: Clip.antiAliasWithSaveLayer,
                         decoration: ShapeDecoration(
@@ -210,7 +210,7 @@ class _ChatViewState extends State<ChatView> implements twitch.Listener {
                 ),
               WidgetBlur(
                 child: Material(
-                  color: Theme.of(context).colorScheme.surface.withAlpha(196),
+                  color: Theme.of(context).colorScheme.surface.withAlpha(UserPrefs.instance.panelAlpha(196)),
                   child: ChatInputBox(
                     key: gkey,
                     client: widget.client,

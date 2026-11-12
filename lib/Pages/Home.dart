@@ -308,7 +308,7 @@ class _HomePageState extends State<HomePage> implements twitch.Listener {
                 builder: (context) {
                   var widget = Material(
                     color: client.channels.isEmpty
-                        ? Theme.of(context).colorScheme.surface.withAlpha(196)
+                        ? Theme.of(context).colorScheme.surface.withAlpha(UserPrefs.instance.panelAlpha(196))
                         : Colors.transparent,
                     child: SafeArea(
                       child: Column(

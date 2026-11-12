@@ -48,7 +48,7 @@ class _EmoteListModalState extends State<EmoteListModal> {
         child: Builder(builder: (context) {
           return WidgetBlur(
             child: Material(
-              color: Theme.of(context).canvasColor.withAlpha(196),
+              color: Theme.of(context).canvasColor.withAlpha(UserPrefs.instance.panelAlpha(196)),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [

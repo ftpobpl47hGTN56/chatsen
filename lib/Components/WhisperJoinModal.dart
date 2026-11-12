@@ -46,7 +46,7 @@ class _WhisperJoinModalState extends State<WhisperJoinModal> {
   @override
   Widget build(BuildContext context) => WidgetBlur(
         child: Material(
-          color: Theme.of(context).canvasColor.withAlpha(196),
+          color: Theme.of(context).canvasColor.withAlpha(UserPrefs.instance.panelAlpha(196)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

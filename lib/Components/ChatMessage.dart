@@ -12,6 +12,7 @@ import '/Components/WidgetTooltip.dart';
 import '/Settings/Settings.dart';
 import '/Settings/SettingsState.dart';
 import 'package:flutter/gestures.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -27,6 +28,7 @@ import 'UserCard.dart';
 import 'EmotePopup.dart';
 import 'UserPrefs.dart';
 import 'MediaPreview.dart';
+import 'ReplyThread.dart';
 import 'UI/NetworkImageWrapper.dart';
 
 /// [ChatMessage] is a Widget that takes a [twitch.Message] and renders into something readable and interactable.
@@ -37,6 +39,9 @@ class ChatMessage extends StatelessWidget {
   final bool shadow;
   final GlobalKey<ChatInputBoxState>? gkey;
 
+  /// Внутри окна ветки шапка ответа и счётчик ответов не нужны.
+  final bool inThread;
+
   const ChatMessage({
     Key? key,
     this.prefixText,
@@ -44,7 +49,127 @@ class ChatMessage extends StatelessWidget {
     this.backgroundColor,
     this.shadow = false,
     this.gkey,
+    this.inThread = false,
   }) : super(key: key);
+
+  /// Сколько ответов в чате ссылается на это сообщение как на корень ветки.
+  int get replyCount {
+    final id = message.id;
+    if (id == null) return 0;
+    return message.channel?.messages.where((m) => m.threadId == id).length ?? 0;
+  }
+
+  /// 15 стандартных цветов Twitch для юзеров, не выбравших цвет (как в Chatterino).
+  static const _twitchDefaults = [
+    0xFFFF0000, 0xFF0000FF, 0xFF008000, 0xFFB22222, 0xFFFF7F50, 0xFF9ACD32, 0xFFFF4500, 0xFF2E8B57,
+    0xFFDAA520, 0xFFD2691E, 0xFF5F9EA0, 0xFF1E90FF, 0xFFFF69B4, 0xFF8A2BE2, 0xFF00FF7F,
+  ];
+
+  static Color nickColor(String? hex, String? login) {
+    final v = hex == null ? null : int.tryParse(hex, radix: 16);
+    if (v != null) return Color(0xFF000000 | v);
+    final name = (login ?? '').toLowerCase();
+    var h = 0;
+    for (final c in name.codeUnits) {
+      h = (h * 31 + c) & 0x7fffffff;
+    }
+    return Color(_twitchDefaults[h % _twitchDefaults.length]);
+  }
+
+  /// Цвет любого юзера в этом чате (для @упоминаний «цветом ника»).
+  Color colorForLogin(BuildContext context, String login) {
+    final custom = UserPrefs.instance.userColor(login);
+    if (custom != null) return custom;
+    final last = message.channel?.messages.lastWhereOrNull((m) => m.user?.login?.toLowerCase() == login.toLowerCase());
+    return getUserColor(context, nickColor(last?.user?.color, login));
+  }
+
+  /// Фильтр значков по настройке «Значки у ника».
+  static const _roleBadges = ['broadcaster', 'moderator', 'lead_moderator', 'vip', 'subscriber', 'founder', 'staff', 'admin', 'global_mod', 'partner'];
+
+  Iterable<T> _filterBadges<T>(List<T> all) {
+    switch (UserPrefs.instance.badgeMode) {
+      case 2:
+        return <T>[];
+      case 1:
+        return all.where((b) {
+          final tag = '${(b as dynamic).tag ?? ''}';
+          return _roleBadges.any((r) => tag.startsWith('$r/'));
+        });
+      default:
+        return all;
+    }
+  }
+
+  /// Стилизованное @упоминание по настройке «Стиль упоминаний».
+  InlineSpan _mentionSpan(BuildContext context, String word, String login, List<Shadow>? shadows) {
+    final theme = Theme.of(context);
+    final accent = theme.colorScheme.primary;
+    void open() => UserCard.show(context, login: login, channel: message.channel);
+    switch (UserPrefs.instance.mentionStyle) {
+      case 0: // обычный
+        return TextSpan(text: '$word ', style: TextStyle(fontWeight: FontWeight.bold, shadows: shadows), recognizer: TapGestureRecognizer()..onTap = open);
+      case 2: // плашка
+      case 3: // рамка
+        final pill = UserPrefs.instance.mentionStyle == 2;
+        return WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: GestureDetector(
+              onTap: open,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: pill ? accent.withAlpha(50) : null,
+                  border: pill ? null : Border.all(color: accent, width: 1.5),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(word, style: TextStyle(color: accent, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ),
+        );
+      case 4: // цвет ника
+        return TextSpan(text: '$word ', style: TextStyle(color: colorForLogin(context, login), fontWeight: FontWeight.bold, shadows: shadows), recognizer: TapGestureRecognizer()..onTap = open);
+      default: // 1 — акцент
+        return TextSpan(text: '$word ', style: TextStyle(color: accent, fontWeight: FontWeight.bold, shadows: shadows), recognizer: TapGestureRecognizer()..onTap = open);
+    }
+  }
+
+  /// Шапка ответа: «↪ @ник: текст родителя». Тап — открыть ветку.
+  Widget _replyHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    final name = message.replyParentName ?? '';
+    final body = message.replyParentBody ?? '';
+    return InkWell(
+      onTap: () => ReplyThread.show(context, message: message, input: gkey?.currentState),
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 2),
+        child: Row(
+          children: [
+            Icon(Icons.subdirectory_arrow_right, size: 16, color: theme.colorScheme.primary),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text.rich(
+                TextSpan(children: [
+                  TextSpan(
+                    text: '@$name ',
+                    style: TextStyle(color: colorForLogin(context, message.replyParentLogin ?? name), fontWeight: FontWeight.bold),
+                  ),
+                  TextSpan(text: body),
+                ]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Color getUserColor(BuildContext context, Color color) {
     switch (Theme.of(context).brightness) {
@@ -90,10 +215,29 @@ class ChatMessage extends StatelessWidget {
                   UserCard.show(context, login: login, channel: message.channel);
                 },
               ),
+            if (login != null && input != null && message.id != null)
+              ListTile(
+                leading: const Icon(Icons.reply),
+                title: Text(tr('Reply', 'Ответить')),
+                subtitle: Text(tr('Twitch reply — linked to this message', 'Ответ Twitch — привязан к этому сообщению')),
+                onTap: () {
+                  Navigator.of(sheet).pop();
+                  input.startReply(message);
+                },
+              ),
+            if (message.threadId != null || replyCount > 0)
+              ListTile(
+                leading: const Icon(Icons.forum_outlined),
+                title: Text(tr('Open thread', 'Открыть ветку')),
+                onTap: () {
+                  Navigator.of(sheet).pop();
+                  ReplyThread.show(context, message: message, input: input);
+                },
+              ),
             if (login != null && input != null)
               ListTile(
                 leading: const Icon(Icons.alternate_email),
-                title: Text(tr('Reply (@username)', 'Ответить (@ник)')),
+                title: Text(tr('Mention (@username)', 'Упомянуть (@ник)')),
                 onTap: () {
                   Navigator.of(sheet).pop();
                   input.insertMention(login);
@@ -171,7 +315,9 @@ class ChatMessage extends StatelessWidget {
     if (prefs.isIgnored(message.user?.login) && !prefs.revealed.contains(message.id)) {
       return _ignoredStub(context);
     }
-    var color = getUserColor(context, Color(int.tryParse(message.user?.color ?? '777777', radix: 16) ?? 0x777777).withAlpha(255));
+    // DearKing mod: свой цвет из карточки юзера > цвет из Twitch > стандартная палитра Twitch по нику
+    // (раньше юзеры без выбранного цвета были серыми 777777)
+    var color = UserPrefs.instance.userColor(message.user?.login) ?? getUserColor(context, nickColor(message.user?.color, message.user?.login));
     var spans = <InlineSpan>[];
     // ссылки, под которыми показываем превью медиа
     final previews = <String>[];
@@ -191,15 +337,21 @@ class ChatMessage extends StatelessWidget {
         case twitch.MessageTokenType.Text:
           final word = '${token.data}';
           final mention = RegExp(r'^@([A-Za-z0-9_]{2,25})[,.:!?]*$').firstMatch(word);
+          // в ответе Twitch сам ставит «@ник» в начало — он уже показан в шапке ответа
+          if (mention != null && spans.isEmpty && message.replyParentLogin != null && mention.group(1)!.toLowerCase() == message.replyParentLogin!.toLowerCase()) {
+            break;
+          }
+          if (mention != null) {
+            spans.add(_mentionSpan(context, word, mention.group(1)!, shadows));
+            break;
+          }
           spans.add(
             TextSpan(
               text: '$word ',
               style: TextStyle(
                 color: (message.user == null || message.action) ? color : null,
-                fontWeight: mention != null ? FontWeight.bold : null,
                 shadows: shadows,
               ),
-              recognizer: mention == null ? null : (TapGestureRecognizer()..onTap = () => UserCard.show(context, login: mention.group(1)!, channel: message.channel)),
             ),
           );
           break;
@@ -419,8 +571,13 @@ class ChatMessage extends StatelessWidget {
           // onLongPress: () async => await Clipboard.setData(ClipboardData(text: message.body ?? '')),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 8.0),
-            child: previews.isEmpty
-                ? Text.rich(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // DearKing mod: шапка ответа «↪ @ник: текст» — тап открывает ветку
+                if (!inThread && message.replyParentId != null) _replyHeader(context),
+                Text.rich(
               TextSpan(
                 children: <InlineSpan>[
                       if (prefixText != null)
@@ -453,7 +610,7 @@ class ChatMessage extends StatelessWidget {
                       //     ),
                       if (message.user != null)
                         // Good god chatsen2 will need something better than this
-                        for (var badge in [
+                        for (var badge in _filterBadges([
                           ...message.badges,
                           ...BlocProvider.of<BTTVBadges>(context).getBadgesForUser('${message.user?.id}'),
                           ...BlocProvider.of<FFZBadges>(context).getBadgesForUser('${message.user?.login?.toLowerCase()}'),
@@ -464,129 +621,7 @@ class ChatMessage extends StatelessWidget {
                           ...BlocProvider.of<SevenTVBadges>(context).getBadgesForUser('${message.user?.id}'),
                           ...BlocProvider.of<ChatsenBadges>(context).getBadgesForUser('${message.user?.id}'),
                           ...BlocProvider.of<Chatsen2Badges>(context).getBadgesForUser('${message.user?.id}'),
-                        ])
-                          WidgetSpan(
-                            child: WidgetTooltip(
-                              message: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.only(bottom: 4.0),
-                                      child: ClipRRect(
-                                        borderRadius: badge.color != null ? BorderRadius.circular(96.0 / 8.0) : BorderRadius.zero,
-                                        child: Container(
-                                          color: badge.color != null ? Color(int.tryParse(badge.color ?? '777777', radix: 16) ?? 0x777777).withAlpha(255) : null,
-                                          child: badge.mipmap!.last!.endsWith('.svg')
-                                              ? SvgPicture.network(
-                                                  badge.mipmap!.last!,
-                                                  height: 96.0,
-                                                  fit: BoxFit.fitHeight,
-                                                )
-                                              : NetworkImageW(
-                                                  badge.mipmap!.last!,
-                                                  height: 96.0,
-                                                  fit: BoxFit.fitHeight,
-                                                  cache: badge.cache,
-                                                ),
-                                        ),
-                                      ),
-                                    ),
-                                    Text('${badge.title}'),
-                                    if (badge.title != badge.description && badge.description != null) Text('${badge.description}'),
-                                  ],
-                                ),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.only(right: 4.0),
-                                child: ClipRRect(
-                                  borderRadius: badge.color != null ? BorderRadius.circular(2.0) : BorderRadius.zero,
-                                  child: Container(
-                                    color: badge.color != null ? Color(int.tryParse(badge.color ?? '777777', radix: 16) ?? 0x777777).withAlpha(255) : null,
-                                    child: badge.mipmap!.last!.endsWith('.svg')
-                                        ? SvgPicture.network(
-                                            badge.mipmap!.last!,
-                                            height: 18.0,
-                                          )
-                                        : NetworkImageW(
-                                            badge.mipmap!.last!,
-                                            height: 18.0,
-                                            fit: BoxFit.fitHeight,
-                                            cache: badge.cache,
-                                          ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                      if (message.user != null)
-                        TextSpan(
-                          // локальное имя (Rename) показываем вместо ника, оригинальный логин — в скобках
-                          text: (UserPrefs.instance.aliasOf(message.user!.login) != null
-                                  ? '${UserPrefs.instance.aliasOf(message.user!.login)} (${message.user!.login})'
-                                  : '${message.user!.displayName}' + (message.user!.displayName!.toLowerCase() != message.user!.login!.toLowerCase() ? ' (${message.user!.login})' : '')) +
-                              (message.action ? ' ' : ': '),
-                          style: TextStyle(
-                            color: color,
-                            fontWeight: FontWeight.bold,
-                            shadows: shadows,
-                          ),
-                          recognizer: TapGestureRecognizer()..onTap = () => UserCard.show(context, login: message.user!.login!, channel: message.channel),
-                        ),
-                    ] +
-                    spans,
-              ),
-            )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text.rich(
-              TextSpan(
-                children: <InlineSpan>[
-                      if (prefixText != null)
-                        TextSpan(
-                          text: '$prefixText ',
-                          style: TextStyle(
-                            fontStyle: FontStyle.italic,
-                            shadows: shadows,
-                          ),
-                        ),
-                      if ((BlocProvider.of<Settings>(context).state as SettingsLoaded).messageTimestamp)
-                        TextSpan(
-                          text: '${message.dateTime!.hour.toString().padLeft(2, '0')}:${message.dateTime!.minute.toString().padLeft(2, '0')} ',
-                          style: TextStyle(
-                            // fontWeight: FontWeight.bold,
-                            shadows: shadows,
-                            color: Colors.grey[400],
-                          ),
-                        ),
-                      // if (first != null)
-                      //   for (var badge in first.badges)
-                      //     WidgetSpan(
-                      //       child: Padding(
-                      //         padding: const EdgeInsets.only(right: 4.0),
-                      //         child: NetworkImageW(
-                      //           data!.badges.firstWhere((element) => element.name == badge.badgeName).image,
-                      //           height: 18.0,
-                      //         ),
-                      //       ),
-                      //     ),
-                      if (message.user != null)
-                        // Good god chatsen2 will need something better than this
-                        for (var badge in [
-                          ...message.badges,
-                          ...BlocProvider.of<BTTVBadges>(context).getBadgesForUser('${message.user?.id}'),
-                          ...BlocProvider.of<FFZBadges>(context).getBadgesForUser('${message.user?.login?.toLowerCase()}'),
-                          ...BlocProvider.of<FFZAPBadges>(context).getBadgesForUser('${message.user?.id}'),
-                          ...BlocProvider.of<ChatterinoBadges>(context).getBadgesForUser('${message.user?.id}'),
-                          ...BlocProvider.of<DankChatBadges>(context).getBadgesForUser('${message.user?.id}'),
-                          ...BlocProvider.of<ChattyBadges>(context).getBadgesForUser('${message.user?.login}'),
-                          ...BlocProvider.of<SevenTVBadges>(context).getBadgesForUser('${message.user?.id}'),
-                          ...BlocProvider.of<ChatsenBadges>(context).getBadgesForUser('${message.user?.id}'),
-                          ...BlocProvider.of<Chatsen2Badges>(context).getBadgesForUser('${message.user?.id}'),
-                        ])
+                        ]))
                           WidgetSpan(
                             child: WidgetTooltip(
                               message: Padding(
@@ -660,9 +695,29 @@ class ChatMessage extends StatelessWidget {
                     spans,
               ),
             ),
-                      for (final url in previews) MediaPreview(key: ValueKey(url), url: url),
-                    ],
+                for (final url in previews) MediaPreview(key: ValueKey(url), url: url),
+                // у сообщения есть ответы — кнопка «💬 N ответов» открывает ветку
+                if (!inThread && replyCount > 0)
+                  InkWell(
+                    onTap: () => ReplyThread.show(context, message: message, input: gkey?.currentState),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.forum_outlined, size: 15, color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            tr('$replyCount replies', 'Ответов: $replyCount'),
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
+              ],
+            ),
           ),
         ),
       ),

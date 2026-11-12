@@ -109,6 +109,16 @@ class ChatInputBoxState extends State<ChatInputBox> {
     setState(() {});
   }
 
+  /// Сообщение, на которое сейчас отвечаем (нативный ответ Twitch), или null.
+  twitch.Message? replyingTo;
+
+  void startReply(twitch.Message m) {
+    setState(() => replyingTo = m);
+    focusNode.requestFocus();
+  }
+
+  void cancelReply() => setState(() => replyingTo = null);
+
   /// Можно ли писать в этот чат (есть залогиненный аккаунт).
   bool get canSend => widget.channel?.transmitter?.credentials?.token != null;
 
@@ -200,7 +210,17 @@ class ChatInputBoxState extends State<ChatInputBox> {
       );
     }
 
-    widget.channel?.send(text);
+    // DearKing mod: нативный ответ — тег reply-parent-msg-id. «@ник» в начале оставляем,
+    // чтобы ответ был понятен и в клиентах без поддержки веток (так же делает Twitch и Chatterino).
+    final reply = replyingTo;
+    if (reply != null && reply.id != null && text.isNotEmpty && !text.startsWith('/')) {
+      final login = reply.user?.login ?? '';
+      if (login.isNotEmpty && !text.toLowerCase().startsWith('@${login.toLowerCase()}')) text = '@$login $text';
+      widget.channel?.send(text, replyTo: reply.id);
+    } else {
+      widget.channel?.send(text);
+    }
+    replyingTo = null;
     if (remove) textEditingController.clear();
     setState(() {});
   }
@@ -218,6 +238,35 @@ class ChatInputBoxState extends State<ChatInputBox> {
           height: 1.0,
           color: Theme.of(context).dividerColor,
         ),
+        // DearKing mod: полоска «↪ Ответ @ник: текст ✕» над полем ввода
+        if (replyingTo != null)
+          Container(
+            color: Theme.of(context).colorScheme.primary.withAlpha(30),
+            padding: EdgeInsets.only(left: 12 + MediaQuery.of(context).padding.left, right: 4 + MediaQuery.of(context).padding.right),
+            child: Row(
+              children: [
+                Icon(Icons.reply, size: 18, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(children: [
+                      TextSpan(text: tr('Reply to ', 'Ответ ') + '@${replyingTo!.user?.displayName ?? replyingTo!.user?.login ?? ''}: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(text: replyingTo!.body ?? ''),
+                    ]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                IconButton(
+                  tooltip: tr('Cancel reply', 'Отменить ответ'),
+                  icon: const Icon(Icons.close, size: 18),
+                  visualDensity: VisualDensity.compact,
+                  onPressed: cancelReply,
+                ),
+              ],
+            ),
+          ),
         Padding(
           // MediaQuery.of(context).padding.
           padding: EdgeInsets.only(left: MediaQuery.of(context).padding.left, right: MediaQuery.of(context).padding.right),

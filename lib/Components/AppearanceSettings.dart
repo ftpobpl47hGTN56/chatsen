@@ -177,10 +177,22 @@ class _PaletteSwatch extends StatelessWidget {
 /// Простая палитра: оттенок, насыщенность, яркость + HEX. Без сторонних библиотек.
 class ColorPickerDialog extends StatefulWidget {
   final Color initial;
-  const ColorPickerDialog({Key? key, required this.initial}) : super(key: key);
 
-  static Future<Color?> show(BuildContext context, {required Color initial}) =>
-      showDialog<Color>(context: context, builder: (_) => ColorPickerDialog(initial: initial));
+  /// Заголовок окна; по умолчанию «Цвет фона».
+  final String? title;
+
+  /// Режим цвета ника: превью — текст этим цветом на текущем фоне. [sample] — какой текст показать.
+  final String? sample;
+
+  /// Показать кнопку «Сбросить» (вернёт [ColorPickerDialog.reset]).
+  final bool allowReset;
+
+  static const reset = Color(0x00000000);
+
+  const ColorPickerDialog({Key? key, required this.initial, this.title, this.sample, this.allowReset = false}) : super(key: key);
+
+  static Future<Color?> show(BuildContext context, {required Color initial, String? title, String? sample, bool allowReset = false}) =>
+      showDialog<Color>(context: context, builder: (_) => ColorPickerDialog(initial: initial, title: title, sample: sample, allowReset: allowReset));
 
   @override
   State<ColorPickerDialog> createState() => _ColorPickerDialogState();
@@ -213,7 +225,7 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
   Widget build(BuildContext context) {
     final color = hsv.toColor();
     return AlertDialog(
-      title: Text(tr('Background color', 'Цвет фона')),
+      title: Text(widget.title ?? tr('Background color', 'Цвет фона')),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -223,11 +235,21 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
               height: 64,
               width: double.infinity,
               alignment: Alignment.center,
-              decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12), border: Border.all(color: Theme.of(context).dividerColor)),
-              child: Text(
-                tr('username: message text', 'ник: текст сообщения'),
-                style: TextStyle(color: color.computeLuminance() > 0.4 ? Colors.black : Colors.white),
+              decoration: BoxDecoration(
+                // режим ника: фон приложения, текст выбранным цветом; режим фона — наоборот
+                color: widget.sample != null ? Theme.of(context).scaffoldBackgroundColor : color,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
+              child: widget.sample != null
+                  ? Text.rich(TextSpan(children: [
+                      TextSpan(text: '${widget.sample}: ', style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+                      TextSpan(text: tr('message text', 'текст сообщения')),
+                    ]))
+                  : Text(
+                      tr('username: message text', 'ник: текст сообщения'),
+                      style: TextStyle(color: color.computeLuminance() > 0.4 ? Colors.black : Colors.white),
+                    ),
             ),
             const SizedBox(height: 16),
             Align(alignment: Alignment.centerLeft, child: Text(tr('Hue', 'Оттенок'))),
@@ -252,6 +274,7 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
         ),
       ),
       actions: [
+        if (widget.allowReset) TextButton(onPressed: () => Navigator.of(context).pop(ColorPickerDialog.reset), child: Text(tr('Reset', 'Сбросить'))),
         TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(tr('Cancel', 'Отмена'))),
         FilledButton(
           onPressed: () {
@@ -263,4 +286,155 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
       ],
     );
   }
+}
+
+/// Переключатели «Акцентные рамки» и «Полупрозрачные панели».
+class PanelSwitches extends StatelessWidget {
+  const PanelSwitches({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: UserPrefs.instance,
+        builder: (context, _) {
+          final p = UserPrefs.instance;
+          return Column(
+            children: [
+              SwitchListTile.adaptive(
+                secondary: const Icon(Icons.border_style),
+                title: Text(tr('Accent outlines', 'Акцентные рамки')),
+                subtitle: Text(tr('2px accent border on buttons and windows', 'Рамка 2px цвета акцента у кнопок и окон')),
+                value: p.accentBorders,
+                onChanged: p.setAccentBorders,
+              ),
+              SwitchListTile.adaptive(
+                secondary: const Icon(Icons.opacity),
+                title: Text(tr('Translucent panels', 'Полупрозрачные панели')),
+                subtitle: Text(tr('Chat shows through the side menu and bars', 'Чат просвечивает сквозь шторку и панели')),
+                value: p.translucent,
+                onChanged: p.setTranslucent,
+              ),
+            ],
+          );
+        },
+      );
+}
+
+/// Стиль @упоминаний: варианты с живым превью.
+class MentionStylePicker extends StatelessWidget {
+  const MentionStylePicker({Key? key}) : super(key: key);
+
+  static List<String> get names => [
+        tr('Plain', 'Обычный'),
+        tr('Accent', 'Акцент'),
+        tr('Pill', 'Плашка'),
+        tr('Outline', 'Рамка'),
+        tr('Nick color', 'Цвет ника'),
+      ];
+
+  Widget _preview(BuildContext context, int style) {
+    final theme = Theme.of(context);
+    final accent = theme.colorScheme.primary;
+    const word = '@user123';
+    switch (style) {
+      case 0:
+        return const Text(word, style: TextStyle(fontWeight: FontWeight.bold));
+      case 2:
+      case 3:
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+          decoration: BoxDecoration(
+            color: style == 2 ? accent.withAlpha(50) : null,
+            border: style == 2 ? null : Border.all(color: accent, width: 1.5),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(word, style: TextStyle(color: accent, fontWeight: FontWeight.bold)),
+        );
+      case 4:
+        return const Text(word, style: TextStyle(color: Color(0xFF1E90FF), fontWeight: FontWeight.bold));
+      default:
+        return Text(word, style: TextStyle(color: accent, fontWeight: FontWeight.bold));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: UserPrefs.instance,
+        builder: (context, _) {
+          final current = UserPrefs.instance.mentionStyle;
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(tr('Mention style', 'Стиль упоминаний'), style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                // превью строки чата с выбранным стилем
+                Row(children: [
+                  Text(tr('nick: hi ', 'ник: привет ')),
+                  _preview(context, current),
+                  Text(tr(' how are you', ' как дела')),
+                ]),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (var i = 0; i < names.length; i++)
+                      ChoiceChip(
+                        label: Text(names[i]),
+                        selected: current == i,
+                        onSelected: (_) => UserPrefs.instance.setMentionStyle(i),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      );
+}
+
+/// Значки у ника: все / только роли / скрыть.
+class BadgeModePicker extends StatelessWidget {
+  const BadgeModePicker({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: UserPrefs.instance,
+        builder: (context, _) {
+          final current = UserPrefs.instance.badgeMode;
+          final options = [
+            tr('All', 'Все'),
+            tr('Roles only', 'Только роли'),
+            tr('None', 'Скрыть'),
+          ];
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(tr('Badges next to nicknames', 'Значки у ника'), style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 4),
+                Text(
+                  tr('"Roles only" keeps streamer, mod, VIP and sub badges and hides event, game and 3rd-party badges.',
+                      '«Только роли» оставляет значки стримера, модератора, VIP и сабки, а значки событий, игр и сторонних сервисов скрывает.'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (var i = 0; i < options.length; i++)
+                      ChoiceChip(
+                        label: Text(options[i]),
+                        selected: current == i,
+                        onSelected: (_) => UserPrefs.instance.setBadgeMode(i),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      );
 }

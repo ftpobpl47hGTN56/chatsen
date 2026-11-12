@@ -61,8 +61,8 @@ class _AppState extends State<App> with WidgetsBindingObserver {
                 final bg = UserPrefs.instance.background;
                 return MaterialApp(
                 navigatorKey: Backup.navigatorKey,
-                darkTheme: ThemeManager.buildTheme(Brightness.dark, themeState.colorScheme, highContrast: themeState.highContrast, background: bg),
-                theme: ThemeManager.buildTheme(Brightness.light, themeState.colorScheme, background: bg),
+                darkTheme: ThemeManager.buildTheme(Brightness.dark, themeState.colorScheme, highContrast: themeState.highContrast, background: bg, accentBorders: UserPrefs.instance.accentBorders),
+                theme: ThemeManager.buildTheme(Brightness.light, themeState.colorScheme, background: bg, accentBorders: UserPrefs.instance.accentBorders),
                 // свой фон сам задаёт светлую/тёмную тему
                 themeMode: bg != null ? (ThemeManager.brightnessOf(bg) == Brightness.light ? ThemeMode.light : ThemeMode.dark) : themeState.mode,
                 locale: Locale(UserPrefs.instance.lang),

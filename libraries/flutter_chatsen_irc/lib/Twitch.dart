@@ -199,6 +199,30 @@ class Message {
 
   DateTime? dateTime;
 
+  /// DearKing mod: IRC-теги сообщения (нужны для ответов/веток).
+  Map<String, dynamic> tags = const {};
+
+  static String _unescapeTag(String v) => v
+      .replaceAll(r'\s', ' ')
+      .replaceAll(r'\:', ';')
+      .replaceAll(r'\r', '\r')
+      .replaceAll(r'\n', '\n')
+      .replaceAll(r'\\', '\\');
+
+  String? _tag(String k) {
+    final v = tags[k];
+    return (v == null || '$v'.isEmpty) ? null : _unescapeTag('$v');
+  }
+
+  /// Ответ на сообщение: id, логин, имя и текст родителя.
+  String? get replyParentId => _tag('reply-parent-msg-id');
+  String? get replyParentLogin => _tag('reply-parent-user-login');
+  String? get replyParentName => _tag('reply-parent-display-name') ?? replyParentLogin;
+  String? get replyParentBody => _tag('reply-parent-msg-body');
+
+  /// Корень ветки (первое сообщение, на которое начали отвечать).
+  String? get threadId => _tag('reply-thread-parent-msg-id') ?? replyParentId;
+
   Message({
     String tagBadges = '',
     String tagEmotes = '',
@@ -415,7 +439,7 @@ class Channel {
         tagBadges: message.tags['badges'],
         tagEmotes: message.tags['emotes'],
         dateTime: DateTime.fromMillisecondsSinceEpoch(int.tryParse(message.tags['tmi-sent-ts']) ?? int.tryParse(message.tags['rm-received-ts']) ?? 0),
-      );
+      )..tags = message.tags;
 
       users.putIfAbsent('users', () => []);
       if (chatMessage.user != null && chatMessage.user!.login != null) {
@@ -622,7 +646,8 @@ class Channel {
     client!.listeners.forEach((listener) => listener.onChannelStateChange(this, state));
   }
 
-  void send(String message, {bool action = false}) async {
+  /// [replyTo] — id сообщения, на которое отвечаем (нативные ответы Twitch).
+  void send(String message, {bool action = false, String? replyTo}) async {
     // TODO: Setup buckets per account
     // TODO: Handle whispers
 
@@ -653,7 +678,8 @@ class Channel {
       client!.listeners.forEach((listener) => listener.onWhisper(this, chatMessage));
     } else {
       var lastMessageByTransmitter = messages.lastWhereOrNull((element) => element.user?.id == transmitter!.credentials!.id);
-      transmitter?.send('PRIVMSG $name :$message${(lastMessageByTransmitter?.body == message) ? ' ${utf8.decode([0xF3, 0xA0, 0x80, 0x80])}' : ''}');
+      final replyTag = replyTo != null && replyTo.isNotEmpty ? '@reply-parent-msg-id=$replyTo ' : '';
+      transmitter?.send('${replyTag}PRIVMSG $name :$message${(lastMessageByTransmitter?.body == message) ? ' ${utf8.decode([0xF3, 0xA0, 0x80, 0x80])}' : ''}');
     }
   }
 }
@@ -878,7 +904,7 @@ class Connection {
           body: message.parameters[1],
           tagBadges: message.tags['badges'],
           tagEmotes: message.tags['emotes'],
-        );
+        )..tags = message.tags;
 
         channel?.users.putIfAbsent('users', () => []);
         if (channel != null && chatMessage.user != null && chatMessage.user!.login != null) {
