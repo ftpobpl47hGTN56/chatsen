@@ -14,6 +14,7 @@ class UserPrefs extends ChangeNotifier {
 
   Box? _ignored;
   Box? _aliases;
+  Box? _mod;
 
   /// id сообщений игнорируемых юзеров, которые пользователь раскрыл тапом.
   final Set<String> revealed = {};
@@ -21,7 +22,27 @@ class UserPrefs extends ChangeNotifier {
   Future<void> init() async {
     _ignored = await Hive.openBox('IgnoredUsers');
     _aliases = await Hive.openBox('UserAliases');
+    _mod = await Hive.openBox('ModSettings');
   }
+
+  // ---------- производительность ----------
+
+  /// Сколько последних сообщений рисовать в чате (остальные хранятся для поиска, но не рендерятся).
+  int get renderLimit => (_mod?.get('renderLimit') as int?) ?? 300;
+  Future<void> setRenderLimit(int v) async {
+    await _mod?.put('renderLimit', v.clamp(20, 1000));
+    notifyListeners();
+  }
+
+  /// Размытие (BackdropFilter) под панелями. По умолчанию выключено — главный источник фризов.
+  bool get blur => (_mod?.get('blur') as bool?) ?? false;
+  Future<void> setBlur(bool v) async {
+    await _mod?.put('blur', v);
+    notifyListeners();
+  }
+
+  /// Принудительная перерисовка чата (после очистки сообщений).
+  void bump() => notifyListeners();
 
   String _k(String login) => login.toLowerCase();
 

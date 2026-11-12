@@ -8,8 +8,23 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # base64 вашего debug.keystore (секрет репозитория DEBUG_KEYSTORE).
+      # Без него каждая сборка подписывается новым случайным ключом и не ставится поверх прошлой.
+      KS: ${{ secrets.DEBUG_KEYSTORE }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Restore signing key
+        if: ${{ env.KS != '' }}
+        run: |
+          mkdir -p ~/.android
+          echo "$KS" | base64 -d > ~/.android/debug.keystore
+          keytool -list -keystore ~/.android/debug.keystore -storepass android | grep -i fingerprint || true
+
+      - name: Warn about random signing key
+        if: ${{ env.KS == '' }}
+        run: echo "::warning::DEBUG_KEYSTORE secret not set — APK is signed with a random key and will NOT install over the previous build"
 
       - uses: actions/setup-java@v4
         with:

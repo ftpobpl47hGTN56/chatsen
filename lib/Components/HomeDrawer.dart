@@ -11,7 +11,7 @@ import '../Consts.dart';
 import '/Components/UI/WidgetBlur.dart';
 import '/Pages/Account.dart';
 import '/Pages/Search.dart';
-import '/Pages/Whispers.dart';
+import '/Components/UserPrefs.dart';
 import '/StreamOverlay/StreamOverlayBloc.dart';
 import '/StreamOverlay/StreamOverlayEvent.dart';
 import '/StreamOverlay/StreamOverlayState.dart';
@@ -29,6 +29,17 @@ class HomeDrawer extends StatelessWidget {
     required this.channel,
   }) : super(key: key);
 
+  static void _backToChats(BuildContext context) {
+    final scaffold = Scaffold.maybeOf(context);
+    if (scaffold != null && scaffold.isDrawerOpen) {
+      scaffold.closeDrawer();
+    } else if (scaffold != null && scaffold.isEndDrawerOpen) {
+      scaffold.closeEndDrawer();
+    } else {
+      Navigator.of(context).maybePop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) => WidgetBlur(
         child: Material(
@@ -45,8 +56,9 @@ class HomeDrawer extends StatelessWidget {
                             )
                           : ListView(),
                     ),
+                    if (channel != null) _ModToolsRow(channel: channel!),
                     Padding(
-                      padding: const EdgeInsets.all(12.0),
+                      padding: const EdgeInsets.fromLTRB(12.0, 4.0, 12.0, 12.0),
                       child: Card(
                         elevation: 8.0,
                         child: Row(
@@ -90,16 +102,12 @@ class HomeDrawer extends StatelessWidget {
                                 height: 24.0,
                                 color: Theme.of(context).dividerColor,
                               ),
+                            // DearKing mod: вместо пустой страницы ЛС (Twitch отключил whispers через IRC в 2023)
+                            // — понятная кнопка возврата к чатам
                             IconButton(
-                              icon: Icon((Platform.isMacOS || Platform.isIOS) ? CupertinoIcons.envelope_fill : Icons.inbox),
-                              onPressed: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (BuildContext context) => WhispersPage(
-                                    client: client,
-                                  ),
-                                ),
-                              ),
-                              tooltip: 'Open whispers',
+                              icon: Icon(Icons.forum, color: Theme.of(context).colorScheme.primary),
+                              onPressed: () => _backToChats(context),
+                              tooltip: 'Назад к чатам',
                             ),
                             IconButton(
                               icon: Icon((Platform.isMacOS || Platform.isIOS) ? CupertinoIcons.person_crop_circle_fill_badge_plus : Icons.switch_account),
@@ -163,4 +171,99 @@ class HomeDrawer extends StatelessWidget {
           ),
         ),
       );
+}
+
+
+/// Панель инструментов мода в шторке: Chat cleaner, лимит рендера, размытие, «к чатам».
+class _ModToolsRow extends StatefulWidget {
+  final twitch.Channel channel;
+  const _ModToolsRow({required this.channel});
+
+  @override
+  State<_ModToolsRow> createState() => _ModToolsRowState();
+}
+
+class _ModToolsRowState extends State<_ModToolsRow> {
+  late final TextEditingController limitCtrl = TextEditingController(text: '${UserPrefs.instance.renderLimit}');
+
+  @override
+  void dispose() {
+    limitCtrl.dispose();
+    super.dispose();
+  }
+
+  void _applyLimit(String v) {
+    final n = int.tryParse(v.trim());
+    if (n == null) return;
+    UserPrefs.instance.setRenderLimit(n);
+    limitCtrl.text = '${UserPrefs.instance.renderLimit}';
+    setState(() {});
+  }
+
+  void _clean() {
+    final count = widget.channel.messages.length;
+    widget.channel.messages.clear();
+    UserPrefs.instance.revealed.clear();
+    UserPrefs.instance.bump();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Очищено сообщений: $count')));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+      child: Card(
+        elevation: 8.0,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            children: [
+              // Chat cleaner
+              TextButton.icon(
+                onPressed: _clean,
+                icon: const Icon(Icons.cleaning_services, size: 20),
+                label: Text('Очистить (${widget.channel.messages.length})'),
+              ),
+              const Spacer(),
+              // лимит рендера
+              Tooltip(
+                message: 'Сколько последних сообщений рисовать (20–1000). Меньше — плавнее.',
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.speed, size: 18, color: theme.colorScheme.onSurface.withAlpha(160)),
+                    const SizedBox(width: 4),
+                    SizedBox(
+                      width: 52,
+                      child: TextField(
+                        controller: limitCtrl,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(vertical: 6)),
+                        onSubmitted: _applyLimit,
+                        onTapOutside: (_) {
+                          _applyLimit(limitCtrl.text);
+                          FocusManager.instance.primaryFocus?.unfocus();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // размытие вкл/выкл
+              IconButton(
+                tooltip: UserPrefs.instance.blur ? 'Размытие: вкл (тяжело для GPU)' : 'Размытие: выкл',
+                icon: Icon(UserPrefs.instance.blur ? Icons.blur_on : Icons.blur_off, color: UserPrefs.instance.blur ? theme.colorScheme.primary : null),
+                onPressed: () async {
+                  await UserPrefs.instance.setBlur(!UserPrefs.instance.blur);
+                  setState(() {});
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

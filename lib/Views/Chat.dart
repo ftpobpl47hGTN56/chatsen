@@ -93,28 +93,49 @@ class _ChatViewState extends State<ChatView> implements twitch.Listener {
                 // перерисовка при изменении игнора / локальных имён
                 animation: UserPrefs.instance,
                 builder: (context, _) {
-                var i = 0;
-                var blockedUsers = List<String>.from(BlocProvider.of<BlockedUsersCubit>(context).state).map((element) => element.toLowerCase()).toList();
-                return ListView(
+                var blockedUsers = List<String>.from(BlocProvider.of<BlockedUsersCubit>(context).state).map((element) => element.toLowerCase()).toSet();
+                final settings = state is SettingsLoaded ? state : null;
+                // DearKing mod: рисуем только последние N сообщений (лимит рендера) и строим их
+                // лениво через ListView.builder — раньше на каждое новое сообщение пересоздавались
+                // все ~1000 виджетов, отсюда фризы.
+                final all = widget.channel!.messages;
+                final visible = <twitch.Message>[];
+                final limit = UserPrefs.instance.renderLimit;
+                for (var k = all.length - 1; k >= 0 && visible.length < limit; k--) {
+                  final m = all[k];
+                  if (!blockedUsers.contains(m.user?.login?.toLowerCase())) visible.add(m);
+                }
+                // visible[0] — самое новое сообщение (список перевёрнут: reverse: true)
+                return ListView.builder(
                   reverse: true,
                   controller: scrollController,
                   padding: MediaQuery.of(context).padding + (Platform.isMacOS ? EdgeInsets.only(top: 26.0) : EdgeInsets.zero) + EdgeInsets.only(bottom: (kDebugMode || widget.channel?.transmitter?.credentials?.token != null ? (36.0 + 4.0) : 0.0) + 8.0, top: 8.0),
-                  children: [
-                    for (var message in widget.channel!.messages.where((element) => !blockedUsers.contains(element.user?.login?.toLowerCase()))) ...[
-                      if (state is SettingsLoaded && state.messageLines)
-                        Container(
-                          color: Theme.of(context).dividerColor,
-                          height: 1.0,
-                        ),
-                      ChatMessage(
-                        key: ObjectKey(message),
-                        backgroundColor: state is SettingsLoaded && state.messageAlternateBackground && (i++ % 2 == 0) ? Theme.of(context).dividerColor : null,
-                        message: message,
-                        shadow: widget.shadow,
-                        gkey: gkey,
-                      ),
-                    ],
-                  ].reversed.toList(),
+                  itemCount: visible.length,
+                  // не держать в памяти картинки далеко за экраном
+                  cacheExtent: 600,
+                  addAutomaticKeepAlives: false,
+                  findChildIndexCallback: (key) {
+                    final idx = visible.indexWhere((m) => ObjectKey(m) == key);
+                    return idx < 0 ? null : idx;
+                  },
+                  itemBuilder: (context, index) {
+                    final message = visible[index];
+                    // чередование фона считаем от старых к новым, чтобы полосы не «прыгали»
+                    final alt = settings != null && settings.messageAlternateBackground && ((visible.length - index) % 2 == 0);
+                    final tile = ChatMessage(
+                      key: ObjectKey(message),
+                      backgroundColor: alt ? Theme.of(context).dividerColor : null,
+                      message: message,
+                      shadow: widget.shadow,
+                      gkey: gkey,
+                    );
+                    if (settings == null || !settings.messageLines) return tile;
+                    return Column(
+                      key: ObjectKey(message),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [Container(color: Theme.of(context).dividerColor, height: 1.0), tile],
+                    );
+                  },
                 );
               },
               ),
