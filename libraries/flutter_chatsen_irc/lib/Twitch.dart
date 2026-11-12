@@ -535,7 +535,9 @@ class Channel {
             id: '${emoteData['id']}', // DearKing mod: нужен для попапа эмоута
             provider: 'FFZ',
             mipmap: [
-              for (var url in emoteData['urls'].values) url.startsWith('http') ? url : 'https:$url',
+              // DearKing mod: у анимированных FFZ-эмоутов в 'urls' лежит статичный кадр,
+              // а анимация (WebP) — в отдельном поле 'animated'
+              for (var url in ((emoteData['animated'] is Map && (emoteData['animated'] as Map).isNotEmpty) ? emoteData['animated'] : emoteData['urls']).values) url.startsWith('http') ? url : 'https:$url',
             ],
           );
 
@@ -1154,7 +1156,9 @@ class Client {
             id: '${emoteData['id']}',
             provider: 'FFZ',
             mipmap: [
-              for (var url in emoteData['urls'].values) url.startsWith('http') ? url : 'https:$url',
+              // DearKing mod: у анимированных FFZ-эмоутов в 'urls' лежит статичный кадр,
+              // а анимация (WebP) — в отдельном поле 'animated'
+              for (var url in ((emoteData['animated'] is Map && (emoteData['animated'] as Map).isNotEmpty) ? emoteData['animated'] : emoteData['urls']).values) url.startsWith('http') ? url : 'https:$url',
             ],
           );
 

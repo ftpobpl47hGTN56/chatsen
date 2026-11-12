@@ -43,12 +43,32 @@ class HomeDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) => WidgetBlur(
         child: Material(
-          color: Theme.of(context).canvasColor.withAlpha(196),
+          // без размытия полупрозрачный фон сливается с чатом — делаем почти непрозрачным
+          color: Theme.of(context).canvasColor.withAlpha(UserPrefs.instance.blur ? 196 : 245),
           child: Stack(
             children: [
               SafeArea(
                 child: Column(
                   children: [
+                    // DearKing mod: большая кнопка «назад в чат» — всегда видно, где находишься
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                          onPressed: () => _backToChats(context),
+                          icon: const Icon(Icons.arrow_back_rounded, size: 30),
+                          label: Text(
+                            channel != null ? tr('Back to chat ${channel!.name}', 'Назад в чат ${channel!.name}') : tr('Back to chat', 'Назад в чат'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ),
                     Expanded(
                       child: channel != null
                           ? UserlistView(
@@ -205,6 +225,52 @@ class _ModToolsRowState extends State<_ModToolsRow> {
     if (mounted) setState(() {});
   }
 
+  Future<void> _pickLimit() async {
+    limitCtrl.text = '${UserPrefs.instance.renderLimit}';
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(tr('Max messages per chat', 'Максимум сообщений в чате')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              tr('Older messages are removed automatically. Fewer = smoother.', 'Старые сообщения удаляются автоматически. Меньше — плавнее.'),
+              style: Theme.of(ctx).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            // готовые варианты — без клавиатуры
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final n in const [50, 75, 100, 150, 200, 300, 500, 1000])
+                  ChoiceChip(
+                    label: Text('$n'),
+                    selected: UserPrefs.instance.renderLimit == n,
+                    onSelected: (_) => Navigator.of(ctx).pop('$n'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: limitCtrl,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: tr('Custom (20–1000)', 'Своё число (20–1000)'), isDense: true),
+              onSubmitted: (v) => Navigator.of(ctx).pop(v),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(tr('Cancel', 'Отмена'))),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(limitCtrl.text), child: Text(tr('Apply', 'Применить'))),
+        ],
+      ),
+    );
+    if (result != null) await _applyLimit(result);
+  }
+
   void _clean() {
     final count = widget.channel.messages.length;
     widget.channel.messages.clear();
@@ -239,19 +305,12 @@ class _ModToolsRowState extends State<_ModToolsRow> {
                   children: [
                     Icon(Icons.speed, size: 18, color: theme.colorScheme.onSurface.withAlpha(160)),
                     const SizedBox(width: 4),
-                    SizedBox(
-                      width: 52,
-                      child: TextField(
-                        controller: limitCtrl,
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(vertical: 6)),
-                        onSubmitted: _applyLimit,
-                        onTapOutside: (_) {
-                          _applyLimit(limitCtrl.text);
-                          FocusManager.instance.primaryFocus?.unfocus();
-                        },
-                      ),
+                    // DearKing mod: вместо поля ввода внизу шторки (его закрывала клавиатура) —
+                    // кнопка с числом, по тапу окно с готовыми вариантами
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(minimumSize: const Size(56, 36), padding: const EdgeInsets.symmetric(horizontal: 10)),
+                      onPressed: _pickLimit,
+                      child: Text('${UserPrefs.instance.renderLimit}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
