@@ -52,10 +52,27 @@ jobs:
       - name: Analyze (errors only)
         run: flutter analyze --no-fatal-infos --no-fatal-warnings lib
 
+      # Версия мода — из tool/mod_version.txt, дата — по Новосибирску.
+      # Номер сборки растёт с каждым запуском, чтобы обновление ставилось поверх.
+      - name: Version
+        run: |
+          echo "MODV=$(tr -d '[:space:]' < tool/mod_version.txt)" >> "$GITHUB_ENV"
+          echo "BUILD_DATE=$(TZ=Asia/Novosibirsk date +%Y-%m-%d)" >> "$GITHUB_ENV"
+          echo "BUILD_NUM=$((1200 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+
       - name: Build APK
-        run: flutter build apk --release --split-per-abi
+        run: flutter build apk --release --split-per-abi --build-name="$MODV" --build-number="$BUILD_NUM"
+
+      - name: Rename APKs (version + date)
+        run: |
+          cd build/app/outputs/flutter-apk
+          for f in app-*-release.apk; do
+            abi="${f#app-}"; abi="${abi%-release.apk}"
+            mv "$f" "chatsen-mod-v${MODV}-${BUILD_DATE}-${abi}.apk"
+          done
+          ls -la
 
       - uses: actions/upload-artifact@v4
         with:
-          name: chatsen-mod-apk
-          path: build/app/outputs/flutter-apk/*-release.apk
+          name: chatsen-mod-v${{ env.MODV }}-${{ env.BUILD_DATE }}
+          path: build/app/outputs/flutter-apk/chatsen-mod-*.apk

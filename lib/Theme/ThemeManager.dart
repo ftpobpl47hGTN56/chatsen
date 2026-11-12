@@ -66,10 +66,12 @@ class ThemeManager {
     );
     // DearKing mod: все поверхности (шторки, диалоги, карточки, меню) — оттенки фона, чуть светлее.
     // Новые версии Flutter заполняют их в fromSwatch серым, из-за чего окна были серыми на любом фоне.
-    final base = background ?? colorScheme.surface;
+    // Применяется при ЛЮБОМ фоне, включая стандартный «A» (раньше только при выбранном цвете).
+    final base = background ??
+        (brightness == Brightness.dark ? (highContrast ? Colors.black : Colors.grey[900]!) : Colors.grey[100]!);
     final towards = brightness == Brightness.dark ? Colors.white : Colors.black;
     Color step(double t) => Color.lerp(base, towards, t)!;
-    if (background != null) {
+    {
       colorScheme = colorScheme.copyWith(
         surface: step(0.07),
         surfaceDim: step(0.03),
@@ -79,15 +81,16 @@ class ThemeManager {
         surfaceContainer: step(0.09),
         surfaceContainerHigh: step(0.12),
         surfaceContainerHighest: step(0.15),
-        surfaceTint: Colors.transparent, // без фиолетово-серого налёта на приподнятых панелях
+        // свой фон — без цветного налёта акцента на приподнятых панелях
+        surfaceTint: background != null ? Colors.transparent : null,
       );
     }
     var themeData = ThemeData.from(colorScheme: colorScheme).copyWith(
       scaffoldBackgroundColor: colorScheme.background,
     );
-    if (background != null) {
+    if (background != null) themeData = themeData.copyWith(canvasColor: background);
+    {
       themeData = themeData.copyWith(
-        canvasColor: background,
         cardColor: step(0.09),
         dialogTheme: themeData.dialogTheme.copyWith(backgroundColor: step(0.12)),
         bottomSheetTheme: themeData.bottomSheetTheme.copyWith(backgroundColor: step(0.08), modalBackgroundColor: step(0.08)),

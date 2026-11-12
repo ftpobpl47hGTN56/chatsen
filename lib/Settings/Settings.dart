@@ -16,6 +16,7 @@ class Settings extends Bloc<SettingsEvent, SettingsState> {
       }
 
       final mc = settingsBox.get('mentionCustom');
+      try {
       emit(SettingsLoaded(
         setupScreen: b('setupScreen', true),
         notificationOnWhisper: b('notificationOnWhisper', false),
@@ -29,6 +30,22 @@ class Settings extends Bloc<SettingsEvent, SettingsState> {
         historyUseRecentMessages: b('historyUseRecentMessages', true),
         mentionWithAt: b('mentionWithAt', false),
       ));
+      } catch (_) {
+        // что угодно пошло не так — запускаемся с настройками по умолчанию
+        emit(SettingsLoaded(
+          setupScreen: false,
+          notificationOnWhisper: false,
+          notificationOnMention: false,
+          notificationBackground: false,
+          messageTimestamp: false,
+          messageImagePreview: true,
+          messageLines: false,
+          messageAlternateBackground: false,
+          mentionCustom: <String>[],
+          historyUseRecentMessages: true,
+          mentionWithAt: false,
+        ));
+      }
     });
     on<SettingsChange>((event, emit) async {
       await settingsBox.put('setupScreen', event.state.setupScreen);

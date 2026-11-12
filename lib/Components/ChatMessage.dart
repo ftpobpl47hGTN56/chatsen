@@ -158,7 +158,11 @@ class ChatMessage extends StatelessWidget {
                     text: '@$name ',
                     style: TextStyle(color: colorForLogin(context, message.replyParentLogin ?? name), fontWeight: FontWeight.bold),
                   ),
-                  TextSpan(text: body),
+                  // @упоминания в тексте родителя — акцентом, как в самом чате
+                  for (final w in body.split(' '))
+                    RegExp(r'^@[A-Za-z0-9_]{2,25}[,.:!?]*$').hasMatch(w)
+                        ? TextSpan(text: '$w ', style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold))
+                        : TextSpan(text: '$w '),
                 ]),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
