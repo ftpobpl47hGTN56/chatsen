@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../BlockedUsers/BlockedUsersCubit.dart';
+import '/Components/UserPrefs.dart';
 
 class BlockedUserModal extends StatefulWidget {
   final String? blockedUser;
@@ -55,7 +56,7 @@ class _BlockedUserModalState extends State<BlockedUserModal> {
                 controller: usernameController,
                 decoration: InputDecoration(
                   filled: true,
-                  labelText: 'Username to block',
+                  labelText: tr('Username to block', 'Ник для блокировки'),
                 ),
               ),
               SizedBox(height: 8.0),
@@ -69,7 +70,7 @@ class _BlockedUserModalState extends State<BlockedUserModal> {
                   Navigator.of(context).pop();
                 },
                 icon: Icon(Icons.save),
-                label: Text('Save'),
+                label: Text(tr('Save', 'Сохранить')),
                 style: ButtonStyle(
                   padding: WidgetStateProperty.all(EdgeInsets.all(16.0)),
                   shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(32.0))),

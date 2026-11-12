@@ -62,7 +62,7 @@ class _UserlistViewState extends State<UserlistView> {
                     onLongPress: () async {
                       await Clipboard.setData(ClipboardData(text: user));
                       if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Ник «$user» скопирован')));
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text(tr('Username \'$user\' copied', 'Ник «$user» скопирован'))));
                     },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
@@ -86,7 +86,7 @@ class _UserlistViewState extends State<UserlistView> {
                       contentPadding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
                       filled: false,
                       isDense: true,
-                      hintText: 'Search usernames',
+                      hintText: tr('Search usernames', 'Поиск по никам'),
                       border: InputBorder.none,
                     ),
                     onChanged: (v) => setState(() {}),

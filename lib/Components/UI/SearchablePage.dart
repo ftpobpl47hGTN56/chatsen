@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'CustomSliverAppBarDelegate.dart';
 import 'NoAppBarBlur.dart';
+import '/Components/UserPrefs.dart';
 
 class SearchablePage extends StatelessWidget {
   final String title;
@@ -70,7 +71,7 @@ class SearchablePage extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8.0),
                             child: Text(
-                              'Settings',
+                              tr('Settings', 'Настройки'),
                               style: Theme.of(context).textTheme.headlineMedium!.copyWith(
                                     color: Theme.of(context).colorScheme.onSurface,
                                   ),
@@ -105,7 +106,7 @@ class SearchablePage extends StatelessWidget {
                                   child: TextField(
                                     // controller: searchController,
                                     decoration: InputDecoration(
-                                      hintText: 'Search settings',
+                                      hintText: tr('Search settings', 'Поиск по настройкам'),
                                       isDense: true,
                                       filled: false,
                                       border: InputBorder.none,

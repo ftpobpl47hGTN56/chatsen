@@ -9,6 +9,7 @@ import '/Components/UI/Tile.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '/Components/UserPrefs.dart';
 
 class CommandsPage extends StatefulWidget {
   const CommandsPage({
@@ -83,7 +84,7 @@ class _CommandsPageState extends State<CommandsPage> {
                           ),
                           Spacer(),
                           Text(
-                            'Commands',
+                            tr('Commands', 'Команды'),
                             style: Theme.of(context).textTheme.headlineMedium!.copyWith(
                                   color: Theme.of(context).colorScheme.onSurface,
                                 ),
@@ -117,7 +118,7 @@ class _CommandsPageState extends State<CommandsPage> {
                                   child: TextField(
                                     controller: searchController,
                                     decoration: InputDecoration(
-                                      hintText: 'Search commands',
+                                      hintText: tr('Search commands', 'Поиск команд'),
                                       isDense: true,
                                       filled: false,
                                       border: InputBorder.none,

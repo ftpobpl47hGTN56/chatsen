@@ -9,6 +9,7 @@ import '/Mentions/CustomMentionsCubit.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '/Components/UserPrefs.dart';
 
 class CustomMentionsPage extends StatefulWidget {
   const CustomMentionsPage({
@@ -84,7 +85,7 @@ class _CustomMentionsPageState extends State<CustomMentionsPage> {
                           ),
                           Spacer(),
                           Text(
-                            'Mentions',
+                            tr('Mentions', 'Упоминания'),
                             style: Theme.of(context).textTheme.headlineMedium!.copyWith(
                                   color: Theme.of(context).colorScheme.onSurface,
                                 ),
@@ -118,7 +119,7 @@ class _CustomMentionsPageState extends State<CustomMentionsPage> {
                                   child: TextField(
                                     controller: searchController,
                                     decoration: InputDecoration(
-                                      hintText: 'Search custom mentions',
+                                      hintText: tr('Search custom mentions', 'Поиск упоминаний'),
                                       isDense: true,
                                       filled: false,
                                       border: InputBorder.none,

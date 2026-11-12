@@ -1,5 +1,7 @@
 import '/Consts.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import '/Components/UserPrefs.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -26,10 +28,20 @@ class _AppState extends State<App> {
         builder: (context, settingsState) => BlocBuilder<ThemeBloc, ThemeState>(
           builder: (context, themeState) {
             if (themeState is ThemeLoaded && settingsState is SettingsLoaded) {
-              return MaterialApp(
-                darkTheme: ThemeManager.buildTheme(Brightness.dark, themeState.colorScheme, highContrast: themeState.highContrast),
-                theme: ThemeManager.buildTheme(Brightness.light, themeState.colorScheme),
-                themeMode: themeState.mode,
+              // DearKing mod: фон и язык из UserPrefs (меняются без перезапуска)
+              return ValueListenableBuilder<int>(
+                valueListenable: UserPrefs.instance.appearance,
+                builder: (context, _, __) {
+                final bg = UserPrefs.instance.background;
+                return MaterialApp(
+                darkTheme: ThemeManager.buildTheme(Brightness.dark, themeState.colorScheme, highContrast: themeState.highContrast, background: bg),
+                theme: ThemeManager.buildTheme(Brightness.light, themeState.colorScheme, background: bg),
+                // свой фон сам задаёт светлую/тёмную тему
+                themeMode: bg != null ? (ThemeManager.brightnessOf(bg) == Brightness.light ? ThemeMode.light : ThemeMode.dark) : themeState.mode,
+                locale: Locale(UserPrefs.instance.lang),
+                supportedLocales: const [Locale('en'), Locale('ru')],
+                // системные тексты Flutter (меню «Копировать/Вставить», диалоги) тоже на выбранном языке
+                localizationsDelegates: GlobalMaterialLocalizations.delegates,
                 debugShowCheckedModeBanner: false,
                 home: NotificationWrapper(
                   child: Builder(
@@ -43,6 +55,8 @@ class _AppState extends State<App> {
                     ),
                   ),
                 ),
+              );
+                },
               );
             }
             return Center(child: CircularProgressIndicator.adaptive());

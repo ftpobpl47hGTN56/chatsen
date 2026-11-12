@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '/Components/UI/WidgetBlur.dart';
 import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
 import 'package:hive/hive.dart';
+import '/Components/UserPrefs.dart';
 
 /// [WhisperJoinModal] is our modal view/widget designed to add and join new channels to the client.
 class WhisperJoinModal extends StatefulWidget {
@@ -65,7 +66,7 @@ class _WhisperJoinModalState extends State<WhisperJoinModal> {
                           contentPadding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
                           filled: false,
                           isDense: true,
-                          hintText: 'Whisper names to join',
+                          hintText: tr('Whisper names to join', 'Ники для личных сообщений'),
                           border: InputBorder.none,
                         ),
                         onSubmitted: (text) async => submit(),

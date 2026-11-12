@@ -127,10 +127,10 @@ class _HomePageState extends State<HomePage> implements twitch.Listener {
                   Duration(days: 7)) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(
-                  'Your login will expire soon! Please login again to refresh it.'),
+                  tr('Your login will expire soon! Please login again to refresh it.', 'Вход скоро истечёт! Войдите заново, чтобы продлить.')),
               behavior: SnackBarBehavior.floating,
               action: SnackBarAction(
-                label: 'Re-login',
+                label: tr('Re-login', 'Войти заново'),
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -146,10 +146,10 @@ class _HomePageState extends State<HomePage> implements twitch.Listener {
               (jsonResponse['expires_in'] ?? -1) < 0) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(
-                  'Your login has expired! Please login again to refresh it.'),
+                  tr('Your login has expired! Please login again to refresh it.', 'Вход истёк! Войдите заново.')),
               behavior: SnackBarBehavior.floating,
               action: SnackBarAction(
-                label: 'Re-login',
+                label: tr('Re-login', 'Войти заново'),
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -202,10 +202,10 @@ class _HomePageState extends State<HomePage> implements twitch.Listener {
 
       if (currentReleaseVersion < latestStoreVersion) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('There is a new version available!'),
+          content: Text(tr('There is a new version available!', 'Доступна новая версия!')),
           behavior: SnackBarBehavior.floating,
           action: SnackBarAction(
-            label: 'Update',
+            label: tr('Update', 'Обновить'),
             onPressed: () {
               if (Platform.isIOS) {
                 launchUrl(Uri.parse(
@@ -405,7 +405,7 @@ class _HomePageState extends State<HomePage> implements twitch.Listener {
                                   ),
                                 ),
                                 Tooltip(
-                                  message: 'Add/join a channel',
+                                  message: tr('Add/join a channel', 'Добавить канал'),
                                   child: InkWell(
                                     onTap: () async {
                                       await showChatsenSheet(
@@ -765,7 +765,7 @@ class _HomePageState extends State<HomePage> implements twitch.Listener {
         message.mention) {
       NotificationWrapper.of(context)!.sendNotification(
         payload: message.body,
-        title: '${message.user!.login} in ${channel!.name}',
+        title: tr('${message.user!.login} in ${channel!.name}', '${message.user!.login} в ${channel!.name}'),
         subtitle: message.body,
       );
     }
@@ -802,7 +802,7 @@ class Tutorial extends StatelessWidget {
           children: [
             Icon(Icons.not_started,
                 size: 48.0, color: Theme.of(context).colorScheme.primary),
-            Text('Getting started',
+            Text(tr('Getting started', 'С чего начать'),
                 style: Theme.of(context).textTheme.headlineSmall),
             // Text('To get started, you can join a channel by pressing the + button below.', textAlign: TextAlign.center),
             // SizedBox(height: 32.0),
@@ -814,7 +814,7 @@ class Tutorial extends StatelessWidget {
                 SizedBox(width: 16.0),
                 Expanded(
                     child: Text(
-                        'The add icon allows you to join channels by typing in their names. You can join multiple channels by separating the names with spaces: "chatsen btmc twitch"')),
+                        tr('The add icon lets you join channels: pick from the channels you follow or search Twitch.', 'Кнопка ＋ открывает каналы: выберите из своих подписок или найдите через поиск по Twitch.'))),
               ],
             ),
             SizedBox(height: 16.0),
@@ -824,7 +824,7 @@ class Tutorial extends StatelessWidget {
                 SizedBox(width: 16.0),
                 Expanded(
                     child: Text(
-                        'The menu icon will open the primary menu of the application. You can also hold-and-slide from the left edge to the right to open it!')),
+                        tr('The menu icon opens the main menu. You can also swipe from the left edge.', 'Кнопка меню открывает главное меню. Его же можно вытянуть свайпом от левого края.'))),
               ],
             ),
             SizedBox(height: 16.0),
@@ -834,11 +834,11 @@ class Tutorial extends StatelessWidget {
                 SizedBox(width: 16.0),
                 Expanded(
                     child: Text(
-                        'The email icon will open the mentions menu of the application. You can also hold-and-slide from the right edge to the left to open it!')),
+                        tr('The mail icon opens your mentions. You can also swipe from the right edge.', 'Кнопка с конвертом открывает упоминания. Их же можно вытянуть свайпом от правого края.'))),
               ],
             ),
             SizedBox(height: 32.0),
-            Text('Quick actions',
+            Text(tr('Quick actions', 'Быстрые действия'),
                 style: Theme.of(context).textTheme.headlineSmall),
             SizedBox(height: 16.0),
             Container(
@@ -855,7 +855,7 @@ class Tutorial extends StatelessWidget {
                       ),
                     )),
                     icon: Icon(Icons.account_circle),
-                    label: Text('Add an account'),
+                    label: Text(tr('Add an account', 'Добавить аккаунт')),
                     style: ButtonStyle(
                       shape: WidgetStateProperty.all(RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(32.0))),
@@ -873,7 +873,7 @@ class Tutorial extends StatelessWidget {
                           client.channels.map((channel) => channel.name));
                     },
                     icon: Icon(Icons.chat),
-                    label: Text('Join #chatsenapp'),
+                    label: Text(tr('Join #chatsenapp', 'Зайти в #chatsenapp')),
                     style: ButtonStyle(
                       shape: WidgetStateProperty.all(RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(32.0))),
@@ -885,7 +885,7 @@ class Tutorial extends StatelessWidget {
                   ElevatedButton.icon(
                     onPressed: () => Scaffold.of(context).openEndDrawer(),
                     icon: Icon(Icons.alternate_email),
-                    label: Text('Open mentions'),
+                    label: Text(tr('Open mentions', 'Открыть упоминания')),
                     style: ButtonStyle(
                       shape: WidgetStateProperty.all(RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(32.0))),

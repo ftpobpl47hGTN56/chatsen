@@ -12,6 +12,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../BlockedTerms/BlockedTerm.dart';
 import '../BlockedTerms/BlockedTermsCubit.dart';
 import '../Components/Modal/BlockedTermModal.dart';
+import '/Components/UserPrefs.dart';
 
 class BlockedTermsPage extends StatefulWidget {
   const BlockedTermsPage({
@@ -81,7 +82,7 @@ class _BlockedTermsPageState extends State<BlockedTermsPage> {
                           ),
                           Spacer(),
                           Text(
-                            'Blocked terms',
+                            tr('Blocked terms', 'Запрещённые слова'),
                             style: Theme.of(context).textTheme.headlineMedium!.copyWith(
                                   color: Theme.of(context).colorScheme.onSurface,
                                 ),
@@ -115,7 +116,7 @@ class _BlockedTermsPageState extends State<BlockedTermsPage> {
                                   child: TextField(
                                     controller: searchController,
                                     decoration: InputDecoration(
-                                      hintText: 'Search blocked terms',
+                                      hintText: tr('Search blocked terms', 'Поиск запрещённых слов'),
                                       isDense: true,
                                       filled: false,
                                       border: InputBorder.none,

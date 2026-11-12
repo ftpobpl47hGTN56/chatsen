@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../BlockedTerms/BlockedTerm.dart';
 import '../../BlockedTerms/BlockedTermsCubit.dart';
+import '/Components/UserPrefs.dart';
 
 class BlockedTermModal extends StatefulWidget {
   final BlockedTerm? blockedTerm;
@@ -61,7 +62,7 @@ class _BlockedTermModalState extends State<BlockedTermModal> {
                 controller: patternController,
                 decoration: InputDecoration(
                   filled: true,
-                  labelText: 'Pattern to block',
+                  labelText: tr('Pattern to block', 'Что блокировать'),
                 ),
               ),
               CheckboxListTile(
@@ -69,14 +70,14 @@ class _BlockedTermModalState extends State<BlockedTermModal> {
                 onChanged: (v) => setState(() {
                   regex = v!;
                 }),
-                title: Text('Enable regex'),
+                title: Text(tr('Enable regex', 'Регулярное выражение')),
               ),
               CheckboxListTile(
                 value: caseSensitive,
                 onChanged: (v) => setState(() {
                   caseSensitive = v!;
                 }),
-                title: Text('Case sensitive'),
+                title: Text(tr('Case sensitive', 'Учитывать регистр')),
               ),
               SizedBox(height: 8.0),
               ElevatedButton.icon(
@@ -100,7 +101,7 @@ class _BlockedTermModalState extends State<BlockedTermModal> {
                   Navigator.of(context).pop();
                 },
                 icon: Icon(Icons.save),
-                label: Text('Save'),
+                label: Text(tr('Save', 'Сохранить')),
                 style: ButtonStyle(
                   padding: WidgetStateProperty.all(EdgeInsets.all(16.0)),
                   shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(32.0))),

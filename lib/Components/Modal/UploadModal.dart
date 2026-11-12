@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart' as http;
 import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
+import '/Components/UserPrefs.dart';
 
 class UploadModal extends StatelessWidget {
   // if (lowName.endsWith('.png') || lowName.endsWith('.jpg') || lowName.endsWith('.jpeg') || lowName.endsWith('.apng') || lowName.endsWith('.gif') || lowName.endsWith('.webp'))
@@ -73,7 +74,7 @@ class UploadModal extends StatelessWidget {
         // shrinkWrap: true,
         children: [
           Text(
-            'You are about to upload ${file.name} and share the link in ${channel.name}',
+            tr('You are about to upload ${file.name} and share the link in ${channel.name}', 'Файл ${file.name} будет загружен, а ссылка отправлена в ${channel.name}'),
             style: Theme.of(context).textTheme.titleLarge,
           ),
           SizedBox(height: 16.0),

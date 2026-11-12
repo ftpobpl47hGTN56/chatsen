@@ -22,25 +22,49 @@ class ThemeManager {
     'deepOrange': [Colors.deepOrange, Colors.deepOrangeAccent],
   };
 
+  /// DearKing mod: готовые фоны. null = стандартная тема (системная яркость).
+  static const List<Color?> backgrounds = [
+    null, // стандарт
+    Color(0xFF000000), // AMOLED
+    Color(0xFF18181B), // графит (как Twitch)
+    Color(0xFF0E1621), // ночной синий
+    Color(0xFF171222), // тёмно-фиолетовый
+    Color(0xFF0F1B15), // лесной
+    Color(0xFF1E1712), // кофейный
+    Color(0xFF221014), // винный
+    Color(0xFFEFEFF1), // светло-серый
+    Color(0xFFFFFFFF), // белый
+  ];
+
+  static Brightness brightnessOf(Color c) => c.computeLuminance() > 0.4 ? Brightness.light : Brightness.dark;
+
   static ThemeData buildTheme(Brightness brightness, String color,
-      {bool highContrast = false}) {
+      {bool highContrast = false, Color? background}) {
+    if (background != null) brightness = brightnessOf(background);
     var baseColorScheme = brightness == Brightness.light
         ? ColorScheme.light()
         : ColorScheme.dark();
+    // поверхность (карточки, шторки) — чуть светлее/темнее фона
+    final customSurface = background == null
+        ? null
+        : Color.lerp(background, brightness == Brightness.dark ? Colors.white : Colors.black, 0.07);
     var colorScheme = ColorScheme.fromSwatch(
-      primarySwatch: colors[color]!.first,
+      primarySwatch: (colors[color] ?? colors['amber']!).first,
       brightness: brightness,
-      backgroundColor: brightness == Brightness.dark
-          ? (highContrast ? Colors.black : Colors.grey[900])
-          : Colors.grey[100],
+      backgroundColor: background ??
+          (brightness == Brightness.dark
+              ? (highContrast ? Colors.black : Colors.grey[900])
+              : Colors.grey[100]),
     ).copyWith(
-      surface: brightness == Brightness.dark
-          ? (highContrast ? Color.fromARGB(255, 16, 16, 16) : Colors.grey[850])
-          : baseColorScheme.surface,
+      surface: customSurface ??
+          (brightness == Brightness.dark
+              ? (highContrast ? Color.fromARGB(255, 16, 16, 16) : Colors.grey[850])
+              : baseColorScheme.surface),
     );
     var themeData = ThemeData.from(colorScheme: colorScheme).copyWith(
       scaffoldBackgroundColor: colorScheme.background,
     );
+    if (background != null) themeData = themeData.copyWith(canvasColor: background);
     return themeData.copyWith(
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: colorScheme.surface,

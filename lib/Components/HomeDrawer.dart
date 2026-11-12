@@ -82,7 +82,7 @@ class HomeDrawer extends StatelessWidget {
                                     (BlocProvider.of<StreamOverlayBloc>(context).state is StreamOverlayClosed) ? BlocProvider.of<StreamOverlayBloc>(context).add(StreamOverlayOpen(channelName: channel!.name!.substring(1))) : BlocProvider.of<StreamOverlayBloc>(context).add(StreamOVerlayClose());
                                   }
                                 }, //launch('https://twitch.tv/${channel.name.substring(1)}'),
-                                tooltip: 'Open current channel\'s stream',
+                                tooltip: tr('Open current channel\'s stream', 'Открыть трансляцию канала'),
                               ),
                             if (channel != null)
                               IconButton(
@@ -94,7 +94,7 @@ class HomeDrawer extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                                tooltip: 'Search in the current channel',
+                                tooltip: tr('Search in the current channel', 'Поиск по текущему каналу'),
                               ),
                             if (channel != null)
                               Container(
@@ -107,7 +107,7 @@ class HomeDrawer extends StatelessWidget {
                             IconButton(
                               icon: Icon(Icons.forum, color: Theme.of(context).colorScheme.primary),
                               onPressed: () => _backToChats(context),
-                              tooltip: 'Назад к чатам',
+                              tooltip: tr('Back to chats', 'Назад к чатам'),
                             ),
                             IconButton(
                               icon: Icon((Platform.isMacOS || Platform.isIOS) ? CupertinoIcons.person_crop_circle_fill_badge_plus : Icons.switch_account),
@@ -118,7 +118,7 @@ class HomeDrawer extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              tooltip: 'Add or switch between your accounts',
+                              tooltip: tr('Add or switch between your accounts', 'Добавить или сменить аккаунт'),
                             ),
                             // IconButton(
                             //   icon: Icon(Icons.account_circle),
@@ -141,7 +141,7 @@ class HomeDrawer extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              tooltip: 'Opens the settings page',
+                              tooltip: tr('Opens the settings page', 'Открыть настройки'),
                             ),
                           ],
                         ),
@@ -205,7 +205,7 @@ class _ModToolsRowState extends State<_ModToolsRow> {
     widget.channel.messages.clear();
     UserPrefs.instance.revealed.clear();
     UserPrefs.instance.bump();
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Очищено сообщений: $count')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text(tr('Messages cleared: $count', 'Очищено сообщений: $count'))));
   }
 
   @override
@@ -223,12 +223,12 @@ class _ModToolsRowState extends State<_ModToolsRow> {
               TextButton.icon(
                 onPressed: _clean,
                 icon: const Icon(Icons.cleaning_services, size: 20),
-                label: Text('Очистить (${widget.channel.messages.length})'),
+                label: Text(tr('Clear (${widget.channel.messages.length})', 'Очистить (${widget.channel.messages.length})')),
               ),
               const Spacer(),
               // лимит рендера
               Tooltip(
-                message: 'Сколько последних сообщений рисовать (20–1000). Меньше — плавнее.',
+                message: tr('How many recent messages to render (20–1000). Fewer = smoother.', 'Сколько последних сообщений рисовать (20–1000). Меньше — плавнее.'),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -253,7 +253,7 @@ class _ModToolsRowState extends State<_ModToolsRow> {
               ),
               // размытие вкл/выкл
               IconButton(
-                tooltip: UserPrefs.instance.blur ? 'Размытие: вкл (тяжело для GPU)' : 'Размытие: выкл',
+                tooltip: UserPrefs.instance.blur ? tr('Blur: on (heavy on GPU)', 'Размытие: вкл (тяжело для GPU)') : tr('Blur: off', 'Размытие: выкл'),
                 icon: Icon(UserPrefs.instance.blur ? Icons.blur_on : Icons.blur_off, color: UserPrefs.instance.blur ? theme.colorScheme.primary : null),
                 onPressed: () async {
                   await UserPrefs.instance.setBlur(!UserPrefs.instance.blur);

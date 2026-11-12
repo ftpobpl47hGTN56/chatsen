@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
+import '/Components/UserPrefs.dart';
 
 class SetupModal extends StatelessWidget {
   final twitch.Client client;
@@ -30,8 +31,8 @@ class SetupModal extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Welcome to Chatsen!', style: Theme.of(context).textTheme.headlineSmall),
-                        Text('Before getting started, please review the following settings.'),
+                        Text(tr('Welcome to Chatsen!', 'Добро пожаловать в Chatsen!'), style: Theme.of(context).textTheme.headlineSmall),
+                        Text(tr('Before getting started, please review the following settings.', 'Перед началом проверьте эти настройки.')),
                       ],
                     ),
                   ),
@@ -44,8 +45,8 @@ class SetupModal extends StatelessWidget {
                         child: Icon(Icons.info),
                       ),
                     ),
-                    title: 'Enable chat history',
-                    subtitle: 'Load the chat history from a 3rd-party service that receives the channel names you join to provide you the previous messages. To learn more, click the icon button.',
+                    title: tr('Enable chat history', 'Загружать историю чата'),
+                    subtitle: tr('Load the chat history from a 3rd-party service that receives the channel names you join to provide you the previous messages. To learn more, click the icon button.', 'Прошлые сообщения подгружаются со стороннего сервиса — он получает названия каналов, в которые вы заходите. Подробнее — по кнопке-иконке.'),
                     onTap: () => BlocProvider.of<Settings>(context).add(SettingsChange(state: state.copyWith(historyUseRecentMessages: !state.historyUseRecentMessages))),
                     trailing: Switch.adaptive(
                       activeColor: Theme.of(context).colorScheme.primary,
@@ -61,7 +62,7 @@ class SetupModal extends StatelessWidget {
                       Spacer(),
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: Text('Continue'),
+                        child: Text(tr('Continue', 'Продолжить')),
                       ),
                       SizedBox(width: 16.0),
                     ],

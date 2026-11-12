@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart' as http;
 import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
+import '/Components/UserPrefs.dart';
 
 class ChannelCloseModal extends StatefulWidget {
   final String name;
@@ -48,7 +49,7 @@ class _ChannelCloseModalState extends State<ChannelCloseModal> {
             shrinkWrap: true,
             children: [
               Text(
-                'Are you sure that you want to close channel ${widget.name}?',
+                tr('Are you sure that you want to close channel ${widget.name}?', 'Закрыть канал ${widget.name}?'),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               SizedBox(height: 8.0),
@@ -58,7 +59,7 @@ class _ChannelCloseModalState extends State<ChannelCloseModal> {
                   widget.onLeave();
                 },
                 icon: Icon(Icons.close),
-                label: Text('Leave channel'),
+                label: Text(tr('Leave channel', 'Закрыть')),
                 style: ButtonStyle(
                   backgroundColor: WidgetStateProperty.all(Colors.redAccent),
                   padding: WidgetStateProperty.all(EdgeInsets.all(16.0)),
@@ -75,7 +76,7 @@ class _ChannelCloseModalState extends State<ChannelCloseModal> {
                   padding: WidgetStateProperty.all(EdgeInsets.all(16.0)),
                   shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(32.0))),
                 ),
-                child: Text('Abort'),
+                child: Text(tr('Cancel', 'Отмена')),
               ),
             ],
           ),

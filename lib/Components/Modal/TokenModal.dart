@@ -12,6 +12,7 @@ import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
 
 import '../../Accounts/AccountModel.dart';
 import '../../Accounts/AccountsCubit.dart';
+import '/Components/UserPrefs.dart';
 
 class TokenModal extends StatefulWidget {
   final twitch.Client client;
@@ -68,7 +69,7 @@ class _TokenModalState extends State<TokenModal> {
                 controller: tokenController,
                 decoration: InputDecoration(
                   filled: true,
-                  labelText: 'Token',
+                  labelText: tr('Token', 'Токен'),
                 ),
               ),
               SizedBox(height: 8.0),
@@ -119,7 +120,7 @@ class _TokenModalState extends State<TokenModal> {
                   );
                 },
                 icon: Icon(Icons.add),
-                label: Text('Add account'),
+                label: Text(tr('Add account', 'Добавить аккаунт')),
                 style: ButtonStyle(
                   padding: WidgetStateProperty.all(EdgeInsets.all(16.0)),
                   shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(32.0))),

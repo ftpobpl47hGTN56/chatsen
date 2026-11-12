@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../BlockedUsers/BlockedUsersCubit.dart';
+import '/Components/UserPrefs.dart';
 
 class BlockedUsersPage extends StatefulWidget {
   const BlockedUsersPage({
@@ -83,7 +84,7 @@ class _BlockedUsersPageState extends State<BlockedUsersPage> {
                           ),
                           Spacer(),
                           Text(
-                            'Blocked users',
+                            tr('Blocked users', 'Заблокированные'),
                             style: Theme.of(context).textTheme.headlineMedium!.copyWith(
                                   color: Theme.of(context).colorScheme.onSurface,
                                 ),
@@ -117,7 +118,7 @@ class _BlockedUsersPageState extends State<BlockedUsersPage> {
                                   child: TextField(
                                     controller: searchController,
                                     decoration: InputDecoration(
-                                      hintText: 'Search blocked users',
+                                      hintText: tr('Search blocked users', 'Поиск заблокированных'),
                                       isDense: true,
                                       filled: false,
                                       border: InputBorder.none,

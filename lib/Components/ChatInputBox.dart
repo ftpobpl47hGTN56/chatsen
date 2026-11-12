@@ -16,6 +16,7 @@ import 'Modal/UploadModal.dart';
 import 'UI/NetworkImageWrapper.dart';
 import 'WidgetTooltip.dart';
 import 'package:collection/collection.dart';
+import '/Components/UserPrefs.dart';
 
 /// [ChatInputBox] is our widget that features the input field used for every channel. It's feature rich and even contains autocompletion features!
 class ChatInputBox extends StatefulWidget {
@@ -91,7 +92,8 @@ class ChatInputBoxState extends State<ChatInputBox> {
   void insertMention(String login) => insertText('@$login');
 
   /// Вставляет произвольный текст (ник, эмоут) в позицию курсора с пробелами по краям.
-  void insertText(String str) {
+  /// [focus] = false — не открывать клавиатуру (вставка из попапа эмоута).
+  void insertText(String str, {bool focus = true}) {
     final text = textEditingController.text;
     var cursor = textEditingController.selection.baseOffset;
     if (cursor < 0 || cursor > text.length) cursor = text.length;
@@ -103,9 +105,12 @@ class ChatInputBoxState extends State<ChatInputBox> {
       text: before + insert + after,
       selection: TextSelection.collapsed(offset: before.length + insert.length),
     );
-    focusNode.requestFocus();
+    if (focus) focusNode.requestFocus();
     setState(() {});
   }
+
+  /// Можно ли писать в этот чат (есть залогиненный аккаунт).
+  bool get canSend => widget.channel?.transmitter?.credentials?.token != null;
 
   void appendText(String str) {
     setState(() {
@@ -261,7 +266,7 @@ class ChatInputBoxState extends State<ChatInputBox> {
                             contentPadding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
                             filled: false,
                             isDense: true,
-                            hintText: 'Message ${widget.channel!.name} as ${widget.channel!.transmitter!.credentials!.login}',
+                            hintText: tr('Message ${widget.channel!.name} as ${widget.channel!.transmitter!.credentials!.login}', 'Сообщение в ${widget.channel!.name} от ${widget.channel!.transmitter!.credentials!.login}'),
                             counterText: '',
                             // helperText: 'follow(420m)',
                             border: InputBorder.none,

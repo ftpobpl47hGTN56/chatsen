@@ -1,9 +1,14 @@
 import 'dart:io';
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
+
+/// Перевод строки интерфейса: tr('English', 'Русский').
+/// Обе версии лежат рядом в коде — удобно править и работает с интерполяцией ($login и т.п.).
+String tr(String en, String ru) => UserPrefs.instance.isRu ? ru : en;
 
 /// Локальные настройки по пользователям: игнор и переименования.
 /// Хранятся в Hive-боксах 'IgnoredUsers' (login -> true) и 'UserAliases' (login -> имя).
@@ -43,6 +48,55 @@ class UserPrefs extends ChangeNotifier {
 
   /// Принудительная перерисовка чата (после очистки сообщений).
   void bump() => notifyListeners();
+
+  // ---------- язык и оформление ----------
+
+  /// Отдельный сигнал для MaterialApp: меняется только при смене языка/фона,
+  /// чтобы тап по «игнору» не пересобирал тему всего приложения.
+  final ValueNotifier<int> appearance = ValueNotifier(0);
+
+  /// 'ru' или 'en'. По умолчанию — язык системы.
+  String get lang {
+    final v = _mod?.get('lang') as String?;
+    if (v != null) return v;
+    return PlatformDispatcher.instance.locale.languageCode == 'ru' ? 'ru' : 'en';
+  }
+
+  bool get isRu => lang == 'ru';
+
+  Future<void> setLang(String v) async {
+    await _mod?.put('lang', v);
+    appearance.value++;
+    notifyListeners();
+  }
+
+  /// Цвет фона (ARGB) или null — стандартная тема.
+  Color? get background {
+    final v = _mod?.get('bgColor') as int?;
+    return v == null ? null : Color(v);
+  }
+
+  Future<void> setBackground(Color? c) async {
+    if (c == null) {
+      await _mod?.delete('bgColor');
+    } else {
+      await _mod?.put('bgColor', c.toARGB32());
+    }
+    appearance.value++;
+    notifyListeners();
+  }
+
+  /// Пересобрать вообще все виджеты приложения, включая страницы под текущей
+  /// (после смены языка: строки читаются через tr() во время build).
+  static void rebuildAll([BuildContext? _]) {
+    void visit(Element e) {
+      e.markNeedsBuild();
+      e.visitChildren(visit);
+    }
+
+    final root = WidgetsBinding.instance.rootElement;
+    if (root != null) visit(root);
+  }
 
   String _k(String login) => login.toLowerCase();
 

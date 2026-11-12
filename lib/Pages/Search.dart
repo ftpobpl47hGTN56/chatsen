@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
 import '/Components/ChatMessage.dart';
+import '/Components/UserPrefs.dart';
 
 /// [SearchPage] is a page that will allow the user to search for any message in a provided [twitch.Channel] channel. It features a simple searchbox and fetches results as you type.
 class SearchPage extends StatefulWidget {
@@ -35,7 +36,7 @@ class _SearchPageState extends State<SearchPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-          title: Text('Search in channel'),
+          title: Text(tr('Search in channel', 'Поиск по каналу')),
         ),
         body: SafeArea(
           child: Column(
@@ -57,7 +58,7 @@ class _SearchPageState extends State<SearchPage> {
                   controller: textEditingController,
                   decoration: InputDecoration(
                     filled: true,
-                    labelText: 'Search',
+                    labelText: tr('Search', 'Поиск'),
                     suffixIcon: IconButton(
                       onPressed: () async => setState(() {}),
                       icon: Icon(Icons.search),

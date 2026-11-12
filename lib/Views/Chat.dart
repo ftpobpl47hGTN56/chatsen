@@ -194,7 +194,7 @@ class _ChatViewState extends State<ChatView> implements twitch.Listener {
                                 Icon(Icons.arrow_downward, color: Theme.of(context).colorScheme.primary),
                                 SizedBox(width: 8.0),
                                 Text(
-                                  'Resume scrolling',
+                                  tr('Resume scrolling', 'Вернуться к новым'),
                                   style: TextStyle(color: Theme.of(context).colorScheme.primary),
                                 ),
                               ],

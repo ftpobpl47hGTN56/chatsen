@@ -33,6 +33,8 @@ import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
 
 import 'Commands.dart';
 import 'CustomMentions.dart';
+import '/Components/UserPrefs.dart';
+import '/Components/AppearanceSettings.dart';
 
 class SettingsEntry extends StatelessWidget {
   final String? category;
@@ -80,97 +82,23 @@ class _SettingsPageState extends State<SettingsPage> {
           builder: (context, state) {
             if (state is SettingsLoaded) {
               var entries = [
+                // DearKing mod: язык + простое оформление (фон и акцент) вместо Цвет/Яркость/Контраст
                 SettingsEntry(
-                  category: 'Theme',
-                  title: 'Color',
-                  description: 'Change the primary color of the application',
-                  builder: (context, category, title, description) => Tile(
-                    onTap: () async => BlurModal.show(
-                      context: context,
-                      child: BlocBuilder<ThemeBloc, ThemeState>(
-                        builder: (context, state) => SafeArea(
-                          child: SizedBox(
-                            child: GridView.extent(
-                              shrinkWrap: true,
-                              physics: NeverScrollableScrollPhysics(),
-                              maxCrossAxisExtent: 16.0 * 5.0,
-                              children: [
-                                for (var colorScheme in ThemeManager.colors.entries)
-                                  Tooltip(
-                                    message: colorScheme.key,
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(12.0),
-                                      child: Material(
-                                        borderRadius: BorderRadius.circular(32.0),
-                                        clipBehavior: Clip.antiAlias,
-                                        color: colorScheme.value.first,
-                                        child: InkWell(
-                                          borderRadius: BorderRadius.circular(32.0),
-                                          onTap: () {
-                                            BlocProvider.of<ThemeBloc>(context).add(ThemeColorSchemeChanged(colorScheme: colorScheme.key));
-                                            Navigator.of(context).pop();
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    leading: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Material(
-                        elevation: 2.0,
-                        color: Theme.of(context).colorScheme.primary,
-                        borderRadius: BorderRadius.circular(32.0),
-                        clipBehavior: Clip.antiAlias,
-                        child: SizedBox(width: 24.0, height: 24.0),
-                      ),
-                    ),
-                    title: title,
-                    subtitle: description,
-                  ),
+                  category: tr('Theme', 'Тема'),
+                  title: tr('Language', 'Язык'),
+                  description: 'Русский English',
+                  builder: (context, category, title, description) => const LanguageSwitch(),
                 ),
                 SettingsEntry(
-                  category: 'Theme',
-                  title: 'Brightness',
-                  description: 'Change between light and dark theme',
-                  builder: (context, category, title, description) => Tile(
-                    leading: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Icon((Platform.isMacOS || Platform.isIOS) ? CupertinoIcons.sun_max : Icons.wb_sunny_outlined),
-                    ),
-                    onTap: () => BlocProvider.of<ThemeBloc>(context).add(
-                      ThemeModeChanged(
-                        mode: (BlocProvider.of<ThemeBloc>(context).state as ThemeLoaded).mode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light,
-                      ),
-                    ),
-                    title: title,
-                    subtitle: description,
-                  ),
+                  category: tr('Theme', 'Тема'),
+                  title: tr('Appearance', 'Оформление'),
+                  description: tr('Background and accent color', 'Цвет фона и акцента'),
+                  builder: (context, category, title, description) => const AppearancePicker(),
                 ),
                 SettingsEntry(
-                  category: 'Theme',
-                  title: 'High Contrast',
-                  description: 'Enable a darker dark theme',
-                  builder: (context, category, title, description) => Tile(
-                    title: title,
-                    subtitle: description,
-                    onTap: () => BlocProvider.of<ThemeBloc>(context).add(ThemeHighContrastChanged(highContrast: !(BlocProvider.of<ThemeBloc>(context).state as ThemeLoaded).highContrast)),
-                    trailing: Switch.adaptive(
-                      activeColor: Theme.of(context).colorScheme.primary,
-                      onChanged: (bool value) => BlocProvider.of<ThemeBloc>(context).add(ThemeHighContrastChanged(highContrast: value)),
-                      value: (BlocProvider.of<ThemeBloc>(context).state as ThemeLoaded).highContrast,
-                    ),
-                  ),
-                ),
-                SettingsEntry(
-                  category: 'Setup',
-                  title: 'Setup screen',
-                  description: 'Show the setup screen next startup',
+                  category: tr('Setup', 'Первый запуск'),
+                  title: tr('Setup screen', 'Экран настройки'),
+                  description: tr('Show the setup screen next startup', 'Показать экран первичной настройки при следующем запуске'),
                   builder: (context, category, title, description) => Tile(
                     title: title,
                     subtitle: description,
@@ -183,9 +111,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 SettingsEntry(
-                  category: 'Notifications',
-                  title: 'Notification on whispers',
-                  description: 'Sends a system notification when a whisper is received',
+                  category: tr('Notifications', 'Уведомления'),
+                  title: tr('Notification on whispers', 'Уведомления о личных сообщениях'),
+                  description: tr('Sends a system notification when a whisper is received', 'Системное уведомление при получении личного сообщения'),
                   builder: (context, category, title, description) => Tile(
                     title: title,
                     subtitle: description,
@@ -198,9 +126,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 SettingsEntry(
-                  category: 'Notifications',
-                  title: 'Notification on mentions',
-                  description: 'Sends a system notification when you are mentionned in an open chat',
+                  category: tr('Notifications', 'Уведомления'),
+                  title: tr('Notification on mentions', 'Уведомления об упоминаниях'),
+                  description: tr('Sends a system notification when you are mentioned in an open chat', 'Системное уведомление, когда вас упомянули в открытом чате'),
                   builder: (context, category, title, description) => Tile(
                     title: title,
                     subtitle: description,
@@ -214,9 +142,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 if (Platform.isIOS && !kPlayStoreRelease)
                   SettingsEntry(
-                    category: 'Notifications',
-                    title: 'Background notifications',
-                    description: 'Creates an audio player that plays an empty/muted audio file to keep the application running on iOS. (note: the audio needs to be playing in order for the application to keep running)',
+                    category: tr('Notifications', 'Уведомления'),
+                    title: tr('Background notifications', 'Фоновые уведомления'),
+                    description: tr('Creates an audio player that plays an empty/muted audio file to keep the application running on iOS. (note: the audio needs to be playing in order for the application to keep running)', 'Запускает беззвучный аудиоплеер, чтобы приложение не выгружалось в фоне на iOS (пока звук «играет», приложение работает)'),
                     builder: (context, category, title, description) => Tile(
                       title: title,
                       subtitle: description,
@@ -239,9 +167,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 //   ),
                 // ),
                 SettingsEntry(
-                  category: 'Mentions',
-                  title: 'Configure custom mentions',
-                  description: 'Allows you to create and configure custom mention words and regexes to be pinged with',
+                  category: tr('Mentions', 'Упоминания'),
+                  title: tr('Configure custom mentions', 'Настроить свои упоминания'),
+                  description: tr('Allows you to create and configure custom mention words and regexes to be pinged with', 'Слова и регулярки, на которые будет срабатывать пинг'),
                   builder: (context, category, title, description) => Tile(
                     leading: Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -257,9 +185,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 SettingsEntry(
-                  category: 'Mentions',
-                  title: 'Add a @ in front of user mentions',
-                  description: 'When using autocompletion, clicking a username will add a @ in front of the username.',
+                  category: tr('Mentions', 'Упоминания'),
+                  title: tr('Add a @ in front of user mentions', 'Ставить @ перед ником'),
+                  description: tr('When using autocompletion, clicking a username will add a @ in front of the username.', 'При выборе ника в автодополнении перед ним добавляется @.'),
                   builder: (context, category, title, description) => Tile(
                     title: title,
                     subtitle: description,
@@ -272,9 +200,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 SettingsEntry(
-                  category: 'Message',
-                  title: 'Show timestamp',
-                  description: 'Displays the time at which a message has been sent',
+                  category: tr('Message', 'Сообщения'),
+                  title: tr('Show timestamp', 'Показывать время'),
+                  description: tr('Displays the time at which a message has been sent', 'Время отправки рядом с каждым сообщением'),
                   builder: (context, category, title, description) => Tile(
                     title: title,
                     subtitle: description,
@@ -287,9 +215,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 SettingsEntry(
-                  category: 'Message',
-                  title: 'Show images previews',
-                  description: 'Replaces image links with the images themselves',
+                  category: tr('Message', 'Сообщения'),
+                  title: tr('Show image previews', 'Превью картинок'),
+                  description: tr('Replaces image links with the images themselves', 'Показывать картинку вместо ссылки на неё'),
                   builder: (context, category, title, description) => Tile(
                     title: title,
                     subtitle: description,
@@ -302,9 +230,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 SettingsEntry(
-                  category: 'Message',
-                  title: 'Line separators',
-                  description: 'Separates every message with a line',
+                  category: tr('Message', 'Сообщения'),
+                  title: tr('Line separators', 'Разделители'),
+                  description: tr('Separates every message with a line', 'Линия между сообщениями'),
                   builder: (context, category, title, description) => Tile(
                     title: title,
                     subtitle: description,
@@ -318,9 +246,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 // for (var i = 0; i < 10; ++i)
                 SettingsEntry(
-                  category: 'Message',
-                  title: 'Alternate background color',
-                  description: 'Changes the background color for each message as a separation',
+                  category: tr('Message', 'Сообщения'),
+                  title: tr('Alternate background color', 'Чередование фона'),
+                  description: tr('Changes the background color for each message as a separation', 'Сообщения через одно на чуть другом фоне'),
                   builder: (context, category, title, description) => Tile(
                     title: title,
                     subtitle: description,
@@ -333,9 +261,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 SettingsEntry(
-                  category: 'Message',
-                  title: 'Blocked users',
-                  description: 'Allows you to block users so that you cannot see their messages',
+                  category: tr('Message', 'Сообщения'),
+                  title: tr('Blocked users', 'Заблокированные'),
+                  description: tr('Allows you to block users so that you cannot see their messages', 'Сообщения этих пользователей не показываются'),
                   builder: (context, category, title, description) => Tile(
                     leading: Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -369,9 +297,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 //   ),
                 // ),
                 SettingsEntry(
-                  category: '3rd-party services',
-                  title: 'Load chat history from recent-messages',
-                  description: 'Uses a 3rd-party service by @randers to load chat history',
+                  category: tr('3rd-party services', 'Сторонние сервисы'),
+                  title: tr('Load chat history from recent-messages', 'Загружать историю чата (recent-messages)'),
+                  description: tr('Uses a 3rd-party service by @randers to load chat history', 'Сторонний сервис от @randers подгружает прошлые сообщения'),
                   builder: (context, category, title, description) => Tile(
                     leading: InkWell(
                       borderRadius: BorderRadius.circular(32.0),
@@ -395,9 +323,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 SettingsEntry(
-                  category: 'Commands',
-                  title: 'Configure custom commands',
-                  description: 'Allows you to create and configure custom commands to be used in chat',
+                  category: tr('Commands', 'Команды'),
+                  title: tr('Configure custom commands', 'Свои команды'),
+                  description: tr('Allows you to create and configure custom commands to be used in chat', 'Шаблоны сообщений, вызываемые командой в чате'),
                   builder: (context, category, title, description) => Tile(
                       leading: Padding(
                         padding: const EdgeInsets.all(8.0),
@@ -408,9 +336,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => CommandsPage()))),
                 ),
                 SettingsEntry(
-                  category: 'About',
-                  title: 'Export data',
-                  description: 'Copy all settings and accounts to clipboard as JSON',
+                  category: tr('About', 'О приложении'),
+                  title: tr('Export data', 'Экспорт данных'),
+                  description: tr('Copy all settings and accounts to clipboard as JSON', 'Скопировать все настройки и аккаунты в буфер (JSON)'),
                   builder: (context, category, title, description) => Tile(
                     leading: Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -433,7 +361,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             behavior: SnackBarBehavior.floating,
-                            content: Text('Data copied to clipboard!'),
+                            content: Text(tr('Data copied to clipboard!', 'Данные скопированы в буфер!')),
                           ),
                         );
                       }
@@ -441,9 +369,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 SettingsEntry(
-                  category: 'About',
-                  title: 'Show open-source licenses',
-                  description: 'Display the list of licenses used by dependencies',
+                  category: tr('About', 'О приложении'),
+                  title: tr('Show open-source licenses', 'Лицензии open-source'),
+                  description: tr('Display the list of licenses used by dependencies', 'Лицензии используемых библиотек'),
                   builder: (context, category, title, description) => Tile(
                     leading: Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -455,10 +383,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 SettingsEntry(
-                  category: 'About',
+                  category: tr('About', 'О приложении'),
                   // title: 'Check for updates',
-                  title: 'About Chatsen',
-                  description: 'Version',
+                  title: tr('About Chatsen', 'О Chatsen'),
+                  description: tr('Version', 'Версия'),
                   builder: (context, category, title, description) => FutureBuilder<PackageInfo>(
                     future: PackageInfo.fromPlatform(),
                     builder: (context, snapshot) => Tile(
@@ -467,7 +395,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         child: Icon((Platform.isMacOS || Platform.isIOS) ? CupertinoIcons.device_phone_portrait : Icons.system_security_update),
                       ),
                       title: title,
-                      subtitle: snapshot.hasData ? 'Running ${snapshot.data!.packageName} ${snapshot.data!.version}+${snapshot.data!.buildNumber}' : null,
+                      subtitle: snapshot.hasData ? tr('Running ${snapshot.data!.packageName} ${snapshot.data!.version}+${snapshot.data!.buildNumber}', 'Запущено: ${snapshot.data!.packageName} ${snapshot.data!.version}+${snapshot.data!.buildNumber}') : null,
                     ),
                   ),
                 ),
@@ -543,7 +471,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 8.0),
                               child: Text(
-                                'Settings',
+                                tr('Settings', 'Настройки'),
                                 style: Theme.of(context).textTheme.headlineMedium!.copyWith(
                                       color: Theme.of(context).colorScheme.onSurface,
                                     ),
@@ -578,7 +506,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                     child: TextField(
                                       controller: searchController,
                                       decoration: InputDecoration(
-                                        hintText: 'Search settings',
+                                        hintText: tr('Search settings', 'Поиск по настройкам'),
                                         isDense: true,
                                         filled: false,
                                         border: InputBorder.none,
@@ -619,17 +547,17 @@ class _SettingsPageState extends State<SettingsPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Chatsen is currently work-in-progress!',
+                                      tr('Chatsen is currently work-in-progress!', 'Chatsen ещё в разработке!'),
                                       style: Theme.of(context).textTheme.titleMedium,
                                     ),
                                     SizedBox(height: 2.0),
                                     Text(
-                                      'Create an issue on GitHub or ask on Discord if you encounter a problem.',
+                                      tr('Create an issue on GitHub or ask on Discord if you encounter a problem.', 'Нашли проблему — создайте issue на GitHub или спросите в Discord.'),
                                       style: Theme.of(context).textTheme.titleSmall,
                                     ),
                                     SizedBox(height: 4.0),
                                     Text(
-                                      'You can support the project on Patreon if you appreciate my work!',
+                                      tr('You can support the project on Patreon if you appreciate my work!', 'Проект можно поддержать на Patreon.'),
                                       // style: Theme.of(context).textTheme.titleSmall,
                                     ),
                                   ],
@@ -666,12 +594,12 @@ class _SettingsPageState extends State<SettingsPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Chatsen is looking for translators!',
+                                      tr('Chatsen is looking for translators!', 'Chatsen ищет переводчиков!'),
                                       style: Theme.of(context).textTheme.titleMedium,
                                     ),
                                     SizedBox(height: 2.0),
                                     Text(
-                                      'Join the Discord server if you are interested in translating Chatsen to your language.',
+                                      tr('Join the Discord server if you are interested in translating Chatsen to your language.', 'Заходите в Discord, если хотите перевести Chatsen на свой язык.'),
                                       style: Theme.of(context).textTheme.titleSmall,
                                     ),
                                   ],

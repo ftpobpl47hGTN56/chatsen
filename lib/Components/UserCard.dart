@@ -89,7 +89,7 @@ class _UserCardState extends State<UserCard> {
     if (creds == null) {
       setState(() {
         loading = false;
-        error = 'Войдите в аккаунт, чтобы видеть аватар и дату регистрации';
+        error = tr('Log in to see the avatar and account age', 'Войдите в аккаунт, чтобы видеть аватар и дату регистрации');
       });
       return;
     }
@@ -103,7 +103,7 @@ class _UserCardState extends State<UserCard> {
         if (!mounted) return;
         setState(() {
           loading = false;
-          error = res.statusCode == 200 ? 'Пользователь не найден (забанен или удалён)' : 'Helix: HTTP ${res.statusCode}';
+          error = res.statusCode == 200 ? tr('User not found (banned or deleted)', 'Пользователь не найден (забанен или удалён)') : 'Helix: HTTP ${res.statusCode}';
         });
         return;
       }
@@ -127,7 +127,7 @@ class _UserCardState extends State<UserCard> {
       if (!mounted) return;
       setState(() {
         loading = false;
-        error = 'Ошибка сети: $e';
+        error = tr('Network error: $e', 'Ошибка сети: $e');
       });
     }
   }
@@ -138,11 +138,11 @@ class _UserCardState extends State<UserCard> {
 
   String _age(DateTime d) {
     final days = DateTime.now().difference(d).inDays;
-    if (days < 31) return '$days дн.';
-    if (days < 365) return '${(days / 30.4).floor()} мес.';
+    if (days < 31) return tr('${days}d', '$days дн.');
+    if (days < 365) return tr('${(days / 30.4).floor()}mo', '${(days / 30.4).floor()} мес.');
     final y = days ~/ 365;
     final m = ((days % 365) / 30.4).floor();
-    return m > 0 ? '$y г. $m мес.' : '$y г.';
+    return m > 0 ? tr('${y}y ${m}mo', '$y г. $m мес.') : tr('${y}y', '$y г.');
   }
 
   Future<void> _rename(String login, String display) async {
@@ -150,17 +150,17 @@ class _UserCardState extends State<UserCard> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Имя для $display'),
+        title: Text(tr('Name for $display', 'Имя для $display')),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           maxLength: 32,
-          decoration: const InputDecoration(hintText: 'Локальное имя (видно только вам)'),
+          decoration: InputDecoration(hintText: tr('Local name (only you see it)', 'Локальное имя (видно только вам)')),
           onSubmitted: (v) => Navigator.of(ctx).pop(v),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(''), child: const Text('Сбросить')),
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Отмена')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(''), child: Text(tr('Reset', 'Сбросить'))),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(tr('Cancel', 'Отмена'))),
           FilledButton(onPressed: () => Navigator.of(ctx).pop(ctrl.text), child: const Text('OK')),
         ],
       ),
@@ -168,7 +168,7 @@ class _UserCardState extends State<UserCard> {
     ctrl.dispose();
     if (result == null) return; // отмена
     await UserPrefs.instance.setAlias(login, result);
-    _snack(result.trim().isEmpty ? 'Имя сброшено' : '$login теперь «${result.trim()}»');
+    _snack(result.trim().isEmpty ? tr('Name reset', 'Имя сброшено') : tr('$login is now \'${result.trim()}\'', '$login теперь «${result.trim()}»'));
   }
 
   @override
@@ -212,16 +212,16 @@ class _UserCardState extends State<UserCard> {
                         SelectableText(alias != null ? '$display · $login' : login, style: theme.textTheme.bodyMedium),
                       if (info?.createdAt != null)
                         Text(
-                          'Аккаунт: ${info!.createdAt!.day.toString().padLeft(2, '0')}.${info!.createdAt!.month.toString().padLeft(2, '0')}.${info!.createdAt!.year} (${_age(info!.createdAt!)})',
+                          tr('Account: ', 'Аккаунт: ') + '${info!.createdAt!.day.toString().padLeft(2, '0')}.${info!.createdAt!.month.toString().padLeft(2, '0')}.${info!.createdAt!.year} (${_age(info!.createdAt!)})',
                           style: theme.textTheme.bodySmall,
                         ),
                       Wrap(
                         spacing: 8,
                         children: [
-                          if (widget.channel != null) Text('Сообщений: $msgCount', style: theme.textTheme.bodySmall),
+                          if (widget.channel != null) Text(tr('Messages: $msgCount', 'Сообщений: $msgCount'), style: theme.textTheme.bodySmall),
                           if (info?.broadcasterType != null && info!.broadcasterType!.isNotEmpty) Text(info!.broadcasterType!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary)),
-                          if (ignored) Text('в игноре', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.tertiary)),
-                          if (blocked) Text('заблокирован', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
+                          if (ignored) Text(tr('ignored', 'в игноре'), style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.tertiary)),
+                          if (blocked) Text(tr('blocked', 'заблокирован'), style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
                         ],
                       ),
                     ],
@@ -252,7 +252,7 @@ class _UserCardState extends State<UserCard> {
                 Expanded(
                   child: ChatsenActionButton(
                     icon: Icons.alternate_email,
-                    label: 'Упомянуть',
+                    label: tr('Mention', 'Упомянуть'),
                     onTap: () {
                       input.insertMention(login);
                       Navigator.of(context).pop();
@@ -262,10 +262,10 @@ class _UserCardState extends State<UserCard> {
               Expanded(
                 child: ChatsenActionButton(
                   icon: Icons.copy,
-                  label: 'Ник',
+                  label: tr('Name', 'Ник'),
                   onTap: () async {
                     await Clipboard.setData(ClipboardData(text: login));
-                    _snack('Ник «$login» скопирован');
+                    _snack(tr('Username \'$login\' copied', 'Ник «$login» скопирован'));
                   },
                 ),
               ),
@@ -273,13 +273,13 @@ class _UserCardState extends State<UserCard> {
                 Expanded(
                   child: ChatsenActionButton(
                     icon: Icons.history,
-                    label: 'Сообщения',
+                    label: tr('Messages', 'Сообщения'),
                     onTap: () {
                       final msg = widget.channel!.messages.lastWhereOrNull((m) => m.user?.login?.toLowerCase() == login.toLowerCase());
                       final nav = Navigator.of(context);
                       nav.pop();
                       if (msg?.user == null) {
-                        _snack('Нет сообщений от $login в этом чате');
+                        _snack(tr('No messages from $login in this chat', 'Нет сообщений от $login в этом чате'));
                         return;
                       }
                       nav.push(MaterialPageRoute(builder: (_) => SearchPage(channel: widget.channel, user: msg!.user)));
@@ -301,7 +301,7 @@ class _UserCardState extends State<UserCard> {
               Expanded(
                 child: ChatsenActionButton(
                   icon: Icons.drive_file_rename_outline,
-                  label: alias != null ? 'Имя ✓' : 'Rename',
+                  label: alias != null ? tr('Name ✓', 'Имя ✓') : tr('Rename', 'Имя'),
                   active: alias != null,
                   onTap: () => _rename(login, display),
                 ),
@@ -309,18 +309,18 @@ class _UserCardState extends State<UserCard> {
               Expanded(
                 child: ChatsenActionButton(
                   icon: ignored ? Icons.visibility : Icons.visibility_off,
-                  label: ignored ? 'Не игнор' : 'Игнор',
+                  label: ignored ? tr('Unignore', 'Не игнор') : tr('Ignore', 'Игнор'),
                   active: ignored,
                   onTap: () async {
                     await prefs.setIgnored(login, !ignored);
-                    _snack(ignored ? 'Сообщения $login снова видны' : 'Сообщения $login свёрнуты (тап — показать)');
+                    _snack(ignored ? tr('Messages from $login are visible again', 'Сообщения $login снова видны') : tr('Messages from $login are collapsed (tap to show)', 'Сообщения $login свёрнуты (тап — показать)'));
                   },
                 ),
               ),
               Expanded(
                 child: ChatsenActionButton(
                   icon: blocked ? Icons.lock_open : Icons.block,
-                  label: blocked ? 'Разблок.' : 'Блок',
+                  label: blocked ? tr('Unblock', 'Разблок.') : tr('Block', 'Блок'),
                   color: blocked ? null : theme.colorScheme.error,
                   active: blocked,
                   onTap: () async {
@@ -328,10 +328,10 @@ class _UserCardState extends State<UserCard> {
                     if (blocked) {
                       final existing = cubit.state.firstWhere((e) => e.toLowerCase() == login.toLowerCase());
                       await cubit.remove(existing);
-                      _snack('$login разблокирован');
+                      _snack(tr('$login unblocked', '$login разблокирован'));
                     } else {
                       await cubit.add(login.toLowerCase());
-                      _snack('$login полностью скрыт из чата');
+                      _snack(tr('$login is fully hidden from chat', '$login полностью скрыт из чата'));
                     }
                   },
                 ),

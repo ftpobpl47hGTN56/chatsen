@@ -7,6 +7,7 @@ import '/Components/UI/WidgetBlur.dart';
 import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
 
 import 'UI/NetworkImageWrapper.dart';
+import '/Components/UserPrefs.dart';
 
 class HomeEndDrawer extends StatelessWidget {
   const HomeEndDrawer({
@@ -49,7 +50,7 @@ class HomeEndDrawer extends StatelessWidget {
                                   SizedBox(height: 8.0),
                                   Text.rich(
                                     TextSpan(
-                                      text: 'Mentions would go here\n...if you had any :(',
+                                      text: tr('Mentions would go here\n...if you had any :(', 'Здесь будут упоминания\n...когда они появятся :('),
                                       children: [
                                         /*WidgetSpan(
                                           child: NetworkImageW(

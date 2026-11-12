@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart' as http;
 import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
+import '/Components/UserPrefs.dart';
 
 class CommandModal extends StatefulWidget {
   final Command? command;
@@ -64,7 +65,7 @@ class _CommandModalState extends State<CommandModal> {
                 controller: triggerController,
                 decoration: InputDecoration(
                   filled: true,
-                  labelText: 'Trigger',
+                  labelText: tr('Trigger', 'Команда'),
                 ),
               ),
               SizedBox(height: 8.0),
@@ -73,7 +74,7 @@ class _CommandModalState extends State<CommandModal> {
                 maxLines: null,
                 decoration: InputDecoration(
                   filled: true,
-                  labelText: 'Command',
+                  labelText: tr('Command', 'Текст'),
                 ),
               ),
               SizedBox(height: 8.0),
@@ -94,7 +95,7 @@ class _CommandModalState extends State<CommandModal> {
                   Navigator.of(context).pop();
                 },
                 icon: Icon(Icons.save),
-                label: Text('Save'),
+                label: Text(tr('Save', 'Сохранить')),
                 style: ButtonStyle(
                   padding: WidgetStateProperty.all(EdgeInsets.all(16.0)),
                   shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(32.0))),

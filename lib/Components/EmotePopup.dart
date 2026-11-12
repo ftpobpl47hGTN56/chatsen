@@ -40,6 +40,12 @@ class _EmotePopupState extends State<EmotePopup> {
   static final Map<String, _EmoteMeta> _cache = {};
   final Map<String, Future<_EmoteMeta>> _futures = {};
 
+  /// Сколько раз нажали «Вставить» с момента открытия (или последней отправки).
+  int inserted = 0;
+
+  /// Короткая подсветка «Отправлено ✓» на кнопке.
+  bool sentFlash = false;
+
   static String _platformName(String? p) {
     switch (p) {
       case '7TV':
@@ -81,7 +87,7 @@ class _EmotePopupState extends State<EmotePopup> {
   }
 
   Future<_EmoteMeta> _fetch(twitch.Emote e) async {
-    final zw = e.zeroWidth ? 'zero-width' : null;
+    final zw = e.zeroWidth ? tr('zero-width', 'наложение (zero-width)') : null;
     if (e.id == null || e.id!.isEmpty) return _EmoteMeta(extra: zw);
     try {
       switch (e.provider) {
@@ -101,9 +107,9 @@ class _EmotePopupState extends State<EmotePopup> {
           final tier = j['emoteTier'];
           final parts = [
             if (type != null) type.toLowerCase(),
-            if (tier != null && '$tier'.isNotEmpty) 'tier $tier',
+            if (tier != null && '$tier'.isNotEmpty) tr('tier $tier', 'тир $tier'),
           ];
-          return _EmoteMeta(author: j['channelName'] ?? (type == 'GLOBALS' ? 'Twitch (global)' : null), extra: parts.isEmpty ? null : parts.join(', '));
+          return _EmoteMeta(author: j['channelName'] ?? (type == 'GLOBALS' ? tr('Twitch (global)', 'Twitch (глобальный)') : null), extra: parts.isEmpty ? null : parts.join(', '));
         default:
           return _EmoteMeta(extra: zw);
       }
@@ -115,6 +121,29 @@ class _EmotePopupState extends State<EmotePopup> {
   void _snack(String text) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text(text)));
 
   String _code(twitch.Emote e) => e.alt ?? e.name ?? '';
+
+  /// Отправить набранное в поле ввода; если там пусто — сам эмоут.
+  void _send() {
+    final input = widget.input!;
+    if (!input.canSend) {
+      _snack(tr('Log in to send messages', 'Войдите в аккаунт, чтобы писать в чат'));
+      return;
+    }
+    final typed = input.textEditingController.text.trim();
+    final fullCode = widget.emotes.map(_code).join(' ');
+    if (typed.isEmpty) {
+      input.send(fullCode, remove: false);
+    } else {
+      input.send(typed); // как Enter: команды работают, поле очищается
+    }
+    setState(() {
+      inserted = 0;
+      sentFlash = true;
+    });
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      if (mounted) setState(() => sentFlash = false);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -149,34 +178,56 @@ class _EmotePopupState extends State<EmotePopup> {
               Expanded(
                 child: _ActionButton(
                   icon: Icons.copy,
-                  label: 'Копировать',
+                  label: tr('Copy', 'Копировать'),
                   onTap: () async {
                     await Clipboard.setData(ClipboardData(text: fullCode));
-                    _snack('«$fullCode» скопировано');
+                    _snack(tr("'$fullCode' copied", '«$fullCode» скопировано'));
                   },
                 ),
               ),
               if (widget.input != null)
                 Expanded(
-                  child: _ActionButton(
+                  child: ChatsenActionButton(
                     icon: Icons.content_paste_go,
-                    label: 'Вставить',
+                    label: tr('Insert', 'Вставить'),
+                    // оранжевый счётчик вставок
+                    badge: inserted > 0 ? inserted : null,
                     onTap: () {
-                      widget.input!.insertText(fullCode);
-                      Navigator.of(context).pop();
+                      // попап остаётся открытым, клавиатура не выезжает — можно жать несколько раз
+                      widget.input!.insertText(fullCode, focus: false);
+                      setState(() => inserted++);
                     },
+                  ),
+                ),
+              if (widget.input != null)
+                Expanded(
+                  child: ChatsenActionButton(
+                    icon: sentFlash ? Icons.check : Icons.send,
+                    label: sentFlash ? tr('Sent', 'Готово') : tr('Send', 'Отправить'),
+                    active: sentFlash,
+                    onTap: _send,
                   ),
                 ),
               if (_pageUrl(main) != null)
                 Expanded(
                   child: _ActionButton(
                     icon: Icons.open_in_new,
-                    label: 'Страница',
+                    label: tr('Page', 'Страница'),
                     onTap: () => launchUrl(_pageUrl(main)!, mode: LaunchMode.externalApplication),
                   ),
                 ),
             ],
           ),
+          if (widget.input != null && widget.input!.textEditingController.text.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            // что уйдёт в чат по «Отправить»
+            Text(
+              widget.input!.textEditingController.text.trim(),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+            ),
+          ],
         ],
       ),
     );
@@ -200,9 +251,9 @@ class _EmotePopupState extends State<EmotePopup> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SelectableText(_code(e), style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                    Text('Платформа: ${_platformName(e.provider)}', style: theme.textTheme.bodyMedium),
+                    Text(tr('Platform: ${_platformName(e.provider)}', 'Платформа: ${_platformName(e.provider)}'), style: theme.textTheme.bodyMedium),
                     Text(
-                      'Автор: ${m?.author ?? (loading ? '…' : '—')}',
+                      tr('Author: ', 'Автор: ') + (m?.author ?? (loading ? '…' : '—')),
                       style: theme.textTheme.bodyMedium,
                     ),
                     if (m?.extra != null) Text(m!.extra!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary)),
@@ -235,13 +286,16 @@ class ChatsenActionButton extends StatelessWidget {
   final Color? color;
   final bool active;
 
-  const ChatsenActionButton({Key? key, required this.icon, required this.label, required this.onTap, this.color, this.active = false}) : super(key: key);
+  /// Число в оранжевом кружке в углу кнопки (null — без значка).
+  final int? badge;
+
+  const ChatsenActionButton({Key? key, required this.icon, required this.label, required this.onTap, this.color, this.active = false, this.badge}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final fg = color ?? (active ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface);
-    return Padding(
+    final button = Padding(
       padding: const EdgeInsets.all(4),
       child: Material(
         color: active ? theme.colorScheme.primary : theme.colorScheme.onSurface.withAlpha(20),
@@ -262,6 +316,31 @@ class ChatsenActionButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+    if (badge == null) return button;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        button,
+        Positioned(
+          top: 0,
+          right: 0,
+          child: IgnorePointer(
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 22),
+              height: 22,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.orange,
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(color: theme.colorScheme.surface, width: 2),
+              ),
+              child: Text('$badge', style: const TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

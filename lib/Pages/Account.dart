@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
 import 'package:http/http.dart' as http;
+import '/Components/UserPrefs.dart';
 
 class AccountPage extends StatefulWidget {
   final twitch.Client client;
@@ -95,8 +96,8 @@ class _AccountPageState extends State<AccountPage> {
                           ),
                         )
                       : null,
-                  title: account.token != null ? '${account.login}' : 'Anonymous User',
-                  subtitle: !kDebugMode ? null : (account.token != null ? '${account.clientId}' : 'Login as ${account.login}'),
+                  title: account.token != null ? '${account.login}' : tr('Anonymous User', 'Анонимный пользователь'),
+                  subtitle: !kDebugMode ? null : (account.token != null ? '${account.clientId}' : tr('Login as ${account.login}', 'Войти как ${account.login}')),
                   onTap: () async {
                     print(account.login);
 
@@ -116,10 +117,10 @@ class _AccountPageState extends State<AccountPage> {
 
                       if (jsonResponse['expires_in'] != null && Duration(seconds: (jsonResponse['expires_in'] ?? -1)) <= Duration(days: 7)) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('Your login will expire soon! Please login again to refresh it.'),
+                          content: Text(tr('Your login will expire soon! Please login again to refresh it.', 'Вход скоро истечёт! Войдите заново, чтобы продлить.')),
                           behavior: SnackBarBehavior.floating,
                           action: SnackBarAction(
-                            label: 'Re-login',
+                            label: tr('Re-login', 'Войти заново'),
                             onPressed: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(builder: (BuildContext context) => OAuthPage(client: widget.client)),
@@ -131,10 +132,10 @@ class _AccountPageState extends State<AccountPage> {
 
                       if (jsonResponse['expires_in'] == null || (jsonResponse['expires_in'] ?? -1) < 0) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('Your login has expired! Please login again to refresh it.'),
+                          content: Text(tr('Your login has expired! Please login again to refresh it.', 'Вход истёк! Войдите заново.')),
                           behavior: SnackBarBehavior.floating,
                           action: SnackBarAction(
-                            label: 'Re-login',
+                            label: tr('Re-login', 'Войти заново'),
                             onPressed: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(builder: (BuildContext context) => OAuthPage(client: widget.client)),
@@ -195,7 +196,7 @@ class _AccountPageState extends State<AccountPage> {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8.0),
                             child: Text(
-                              'Accounts',
+                              tr('Accounts', 'Аккаунты'),
                               style: Theme.of(context).textTheme.headlineMedium!.copyWith(
                                     color: Theme.of(context).colorScheme.onSurface,
                                   ),
@@ -230,7 +231,7 @@ class _AccountPageState extends State<AccountPage> {
                                   child: TextField(
                                     controller: searchController,
                                     decoration: InputDecoration(
-                                      hintText: 'Search accounts',
+                                      hintText: tr('Search accounts', 'Поиск аккаунтов'),
                                       isDense: true,
                                       filled: false,
                                       border: InputBorder.none,

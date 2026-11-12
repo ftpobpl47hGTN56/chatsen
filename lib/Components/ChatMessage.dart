@@ -83,7 +83,7 @@ class ChatMessage extends StatelessWidget {
             if (login != null)
               ListTile(
                 leading: const Icon(Icons.person),
-                title: Text('Профиль $login'),
+                title: Text(tr('Profile: $login', 'Профиль $login')),
                 onTap: () {
                   Navigator.of(sheet).pop();
                   UserCard.show(context, login: login, channel: message.channel);
@@ -92,7 +92,7 @@ class ChatMessage extends StatelessWidget {
             if (login != null && input != null)
               ListTile(
                 leading: const Icon(Icons.alternate_email),
-                title: const Text('Ответить (@ник)'),
+                title: Text(tr('Reply (@username)', 'Ответить (@ник)')),
                 onTap: () {
                   Navigator.of(sheet).pop();
                   input.insertMention(login);
@@ -101,32 +101,32 @@ class ChatMessage extends StatelessWidget {
             if (login != null)
               ListTile(
                 leading: const Icon(Icons.badge_outlined),
-                title: const Text('Копировать ник'),
+                title: Text(tr('Copy username', 'Копировать ник')),
                 onTap: () {
                   Navigator.of(sheet).pop();
-                  _copy(context, login, 'Ник скопирован');
+                  _copy(context, login, tr('Username copied', 'Ник скопирован'));
                 },
               ),
             ListTile(
               leading: const Icon(Icons.copy),
-              title: const Text('Копировать сообщение'),
+              title: Text(tr('Copy message', 'Копировать сообщение')),
               onTap: () {
                 Navigator.of(sheet).pop();
-                _copy(context, message.body ?? '', 'Сообщение скопировано');
+                _copy(context, message.body ?? '', tr('Message copied', 'Сообщение скопировано'));
               },
             ),
             ListTile(
               leading: const Icon(Icons.copy_all),
-              title: const Text('Копировать с ником и временем'),
+              title: Text(tr('Copy with username and time', 'Копировать с ником и временем')),
               onTap: () {
                 Navigator.of(sheet).pop();
-                _copy(context, '$ts${message.user?.displayName ?? ''}: ${message.body ?? ''}', 'Скопировано');
+                _copy(context, '$ts${message.user?.displayName ?? ''}: ${message.body ?? ''}', tr('Copied', 'Скопировано'));
               },
             ),
             if (input != null)
               ListTile(
                 leading: const Icon(Icons.content_paste_go),
-                title: const Text('Вставить текст в поле ввода'),
+                title: Text(tr('Paste into input', 'Вставить текст в поле ввода')),
                 onTap: () {
                   Navigator.of(sheet).pop();
                   input.appendText(message.body ?? '');
@@ -154,7 +154,7 @@ class ChatMessage extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 8.0),
           child: Text(
-            '$ts$name: скрыто (игнор) — тап, чтобы показать',
+            tr('$ts$name: hidden (ignored) — tap to show', '$ts$name: скрыто (игнор) — тап, чтобы показать'),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withAlpha(90), fontStyle: FontStyle.italic),

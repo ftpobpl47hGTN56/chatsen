@@ -3,6 +3,7 @@ import '/Mentions/CustomMention.dart';
 import '/Mentions/CustomMentionsCubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '/Components/UserPrefs.dart';
 
 class CustomMentionModal extends StatefulWidget {
   final CustomMention? customMention;
@@ -59,7 +60,7 @@ class _CustomMentionModalState extends State<CustomMentionModal> {
                 controller: patternController,
                 decoration: InputDecoration(
                   filled: true,
-                  labelText: 'Pattern',
+                  labelText: tr('Pattern', 'Шаблон'),
                 ),
               ),
               CheckboxListTile(
@@ -67,14 +68,14 @@ class _CustomMentionModalState extends State<CustomMentionModal> {
                 onChanged: (v) => setState(() {
                   enableRegex = v!;
                 }),
-                title: Text('Enable regex'),
+                title: Text(tr('Enable regex', 'Регулярное выражение')),
               ),
               CheckboxListTile(
                 value: caseSensitive,
                 onChanged: (v) => setState(() {
                   caseSensitive = v!;
                 }),
-                title: Text('Case sensitive'),
+                title: Text(tr('Case sensitive', 'Учитывать регистр')),
               ),
               // SizedBox(height: 8.0),
               // TextField(
@@ -105,7 +106,7 @@ class _CustomMentionModalState extends State<CustomMentionModal> {
                   Navigator.of(context).pop();
                 },
                 icon: Icon(Icons.save),
-                label: Text('Save'),
+                label: Text(tr('Save', 'Сохранить')),
                 style: ButtonStyle(
                   padding: WidgetStateProperty.all(EdgeInsets.all(16.0)),
                   shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(32.0))),

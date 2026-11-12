@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
+import '/Components/UserPrefs.dart';
 
 /// [OAuthPage] is the page that contains our login webview. It's used to be able to add accounts to the application.
 class OAuthPage extends StatefulWidget {
@@ -150,7 +151,7 @@ class _OAuthPageState extends State<OAuthPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-          title: Text('Login with Twitch'),
+          title: Text(tr('Login with Twitch', 'Вход через Twitch')),
           actions: [],
         ),
         body: WebViewWidget(controller: _controller),

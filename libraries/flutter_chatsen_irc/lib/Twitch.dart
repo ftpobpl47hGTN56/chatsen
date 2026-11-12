@@ -10,6 +10,20 @@ import 'package:http/http.dart' as http;
 import '/IRCMessage.dart';
 import '/WebSockets/AbstractWebSocket.dart';
 
+/// DearKing mod: перевод системных сообщений. Приложение подменяет на свой tr() в main().
+String Function(String en, String ru) ircTr = (en, ru) => en;
+
+/// «8 мин 8 с» / «8m 8s» вместо «0:08:08.000000».
+String ircDuration(Duration d) {
+  final parts = <String>[];
+  final days = d.inDays, h = d.inHours % 24, m = d.inMinutes % 60, sec = d.inSeconds % 60;
+  if (days > 0) parts.add(ircTr('${days}d', '$days дн'));
+  if (h > 0) parts.add(ircTr('${h}h', '$h ч'));
+  if (m > 0) parts.add(ircTr('${m}m', '$m мин'));
+  if (sec > 0 || parts.isEmpty) parts.add(ircTr('${sec}s', '$sec с'));
+  return parts.join(' ');
+}
+
 abstract class Listener {
   void onConnectionStateChange(Connection connection, ConnectionState state);
   void onChannelStateChange(Channel channel, ChannelState state);
@@ -345,7 +359,7 @@ class Channel {
     if (!client!.useRecentMessages) {
       var chatMessage = Message(
         channel: this,
-        body: 'Chat history is disabled because you have opted-out. Head over to Chatsen\'s settings if you wish to turn it on.',
+        body: ircTr('Chat history is disabled because you have opted-out. Head over to Chatsen\'s settings if you wish to turn it on.', 'История чата выключена. Её можно включить в настройках Chatsen.'),
         dateTime: DateTime.now(),
       );
 
@@ -897,7 +911,7 @@ class Connection {
           var chatMessage = Message(
             channel: channel,
             id: message!.tags['id'],
-            body: 'A message from ${message.tags['login']} was deleted: ${message.parameters[1]}',
+            body: ircTr('A message from ${message.tags['login']} was deleted: ${message.parameters[1]}', 'Сообщение от ${message.tags['login']} удалено: ${message.parameters[1]}'),
             dateTime: DateTime.now(),
           );
 
@@ -926,7 +940,11 @@ class Connection {
           var chatMessage = Message(
             channel: channel,
             // id: message.tags['id'],
-            body: uid != null ? '${message.parameters[1]} has been ' + (duration != null ? 'timed out for $duration' : 'permabanned') : 'Chat has been cleared by a moderator',
+            body: uid != null
+                ? (duration != null
+                    ? ircTr('${message.parameters[1]} has been timed out for ${ircDuration(duration)}', '${message.parameters[1]} получил таймаут на ${ircDuration(duration)}')
+                    : ircTr('${message.parameters[1]} has been permabanned', '${message.parameters[1]} забанен навсегда'))
+                : ircTr('Chat has been cleared by a moderator', 'Модератор очистил чат'),
             dateTime: DateTime.now(),
           );
 

@@ -5,6 +5,7 @@ import '/Components/HomeTab.dart';
 import '/Components/WhisperJoinModal.dart';
 import '/Components/WhisperTab.dart';
 import '/Views/Chat.dart';
+import '/Components/UserPrefs.dart';
 
 class WhispersPage extends StatefulWidget {
   final twitch.Client? client;
@@ -90,7 +91,7 @@ class _WhispersPageState extends State<WhispersPage>
                         ),
                       ),
                       Tooltip(
-                        message: 'Add/Join a whisper',
+                        message: tr('Add/Join a whisper', 'Открыть личный диалог'),
                         child: InkWell(
                           child: Container(
                             child: Icon(Icons.add),

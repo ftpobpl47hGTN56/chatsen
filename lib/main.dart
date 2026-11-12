@@ -19,6 +19,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '/Components/UserPrefs.dart';
+import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
 // import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'Accounts/AccountModel.dart';
@@ -60,6 +61,7 @@ Future<void> appRunner() async {
   var themeBox = await Hive.openBox('Theme');
   var accountsBox = await Hive.openBox('Accounts');
   await UserPrefs.instance.init(); // игнор + локальные имена
+  twitch.ircTr = tr; // системные сообщения чата на выбранном языке
 
   // Backup all data to SharedPreferences on launch
   try {

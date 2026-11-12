@@ -8,6 +8,7 @@ import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
 import 'package:hive/hive.dart';
 
 import 'UI/NetworkImageWrapper.dart';
+import '/Components/UserPrefs.dart';
 
 /// [EmoteListModal] is our modal view/widget designed to add and join new channels to the client.
 class EmoteListModal extends StatefulWidget {
@@ -65,10 +66,10 @@ class _EmoteListModalState extends State<EmoteListModal> {
                           child: TabBar(
                             indicatorPadding: EdgeInsets.zero,
                             tabs: [
-                              if (!kUnverifiedVersion) Tab(text: 'Channel'),
+                              if (!kUnverifiedVersion) Tab(text: tr('Channel', 'Канал')),
                               if (!kUnverifiedVersion) Tab(text: 'Twitch'),
-                              if (!kUnverifiedVersion) Tab(text: 'Global'),
-                              Tab(text: 'Emojis'),
+                              if (!kUnverifiedVersion) Tab(text: tr('Global', 'Глобальные')),
+                              Tab(text: tr('Emojis', 'Эмодзи')),
                             ],
                           ),
                         ),
@@ -148,7 +149,7 @@ class _EmoteListModalState extends State<EmoteListModal> {
                               contentPadding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 0.0),
                               filled: false,
                               isDense: true,
-                              hintText: 'Search emotes',
+                              hintText: tr('Search emotes', 'Поиск эмоутов'),
                               border: InputBorder.none,
                             ),
                             onChanged: (text) async => setState(() {}),
@@ -164,7 +165,7 @@ class _EmoteListModalState extends State<EmoteListModal> {
                             await widget.channel?.transmitter?.updateUserEmotes();
                             setState(() {});
                           },
-                          tooltip: 'Refresh emotes',
+                          tooltip: tr('Refresh emotes', 'Обновить эмоуты'),
                         ),
                       ],
                     ),

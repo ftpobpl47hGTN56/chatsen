@@ -7,6 +7,7 @@ import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 
 import 'UI/NetworkImageWrapper.dart';
+import '/Components/UserPrefs.dart';
 
 /// Окно добавления чатов (DearKing mod).
 ///  * пустое поле — список каналов, на которые вы зафоловлены (LIVE сверху, с онлайном и игрой);
@@ -94,7 +95,7 @@ class _ChannelJoinModalState extends State<ChannelJoinModal> {
     if (_creds == null) {
       setState(() {
         loadingFollows = false;
-        followsError = 'Войдите в аккаунт, чтобы видеть свои подписки';
+        followsError = tr('Log in to see the channels you follow', 'Войдите в аккаунт, чтобы видеть свои подписки');
       });
       return;
     }
@@ -142,13 +143,13 @@ class _ChannelJoinModalState extends State<ChannelJoinModal> {
       if (!mounted) return;
       setState(() {
         loadingFollows = false;
-        followsError = 'Нет доступа к подпискам. Перелогиньтесь в аккаунт (Настройки → Аккаунты → войти заново), чтобы выдать разрешение user:read:follows.';
+        followsError = tr('No access to your follows. Log in again (Settings → Accounts → re-login) to grant the user:read:follows permission.', 'Нет доступа к подпискам. Перелогиньтесь в аккаунт (Настройки → Аккаунты → войти заново), чтобы выдать разрешение user:read:follows.');
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         loadingFollows = false;
-        followsError = 'Не удалось загрузить подписки: $e';
+        followsError = tr('Could not load follows: $e', 'Не удалось загрузить подписки: $e');
       });
     }
   }
@@ -253,7 +254,7 @@ class _ChannelJoinModalState extends State<ChannelJoinModal> {
               decoration: InputDecoration(
                 isDense: true,
                 prefixIcon: const Icon(Icons.search),
-                hintText: 'Поиск канала или ники через запятую',
+                hintText: tr('Search channels or type names, comma-separated', 'Поиск канала или ники через запятую'),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 suffixIcon: textEditingController.text.isEmpty
                     ? null
@@ -280,16 +281,16 @@ class _ChannelJoinModalState extends State<ChannelJoinModal> {
                       child: Text(followsError!, style: TextStyle(color: theme.colorScheme.error)),
                     ),
                   if (loadingFollows) const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())),
-                  if (!loadingFollows && filteredFollows.isNotEmpty) _header(theme, query.isEmpty ? 'Мои подписки (${follows.length}) · LIVE: ${follows.where((f) => f.live).length}' : 'В подписках'),
+                  if (!loadingFollows && filteredFollows.isNotEmpty) _header(theme, query.isEmpty ? tr('Following (${follows.length}) · LIVE: ${follows.where((f) => f.live).length}', 'Мои подписки (${follows.length}) · LIVE: ${follows.where((f) => f.live).length}') : tr('Following', 'В подписках')),
                   for (final c in filteredFollows) _tile(theme, c),
-                  if (query.isNotEmpty && (searching || extraSearch.isNotEmpty)) _header(theme, 'Поиск по Twitch'),
+                  if (query.isNotEmpty && (searching || extraSearch.isNotEmpty)) _header(theme, tr('Search Twitch', 'Поиск по Twitch')),
                   if (searching) const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
                   for (final c in extraSearch) _tile(theme, c),
                   if (query.isNotEmpty && !searching && filteredFollows.isEmpty && extraSearch.isEmpty)
                     ListTile(
                       leading: const Icon(Icons.add),
-                      title: Text('Добавить «$query»'),
-                      subtitle: const Text('Ничего не найдено — подключиться по нику напрямую'),
+                      title: Text(tr('Add \'$query\'', 'Добавить «$query»')),
+                      subtitle: Text(tr('Nothing found — join by name directly', 'Ничего не найдено — подключиться по нику напрямую')),
                       onTap: _submitText,
                     ),
                 ],
@@ -304,7 +305,7 @@ class _ChannelJoinModalState extends State<ChannelJoinModal> {
                 width: double.infinity,
                 child: FilledButton.icon(
                   icon: const Icon(Icons.add),
-                  label: Text(selected.isEmpty ? (query.isEmpty ? 'Отметьте каналы' : 'Добавить «$query»') : 'Добавить (${selected.length})'),
+                  label: Text(selected.isEmpty ? (query.isEmpty ? tr('Select channels', 'Отметьте каналы') : tr('Add \'$query\'', 'Добавить «$query»')) : tr('Add (${selected.length})', 'Добавить (${selected.length})')),
                   onPressed: selected.isEmpty && query.isEmpty ? null : _submitText,
                 ),
               ),
@@ -325,8 +326,8 @@ class _ChannelJoinModalState extends State<ChannelJoinModal> {
     final isSel = selected.contains(c.login);
     final sub = [
       if (c.live) '🔴 ${c.viewers != null ? '${c.viewers} · ' : ''}${c.game ?? 'LIVE'}',
-      if (!c.live && c.followed && joined) 'уже открыт',
-      if (!c.followed && !c.live) 'оффлайн',
+      if (!c.live && c.followed && joined) tr('already open', 'уже открыт'),
+      if (!c.followed && !c.live) tr('offline', 'оффлайн'),
     ].join();
     return ListTile(
       dense: true,
@@ -354,7 +355,7 @@ class _ChannelJoinModalState extends State<ChannelJoinModal> {
       trailing: joined
           ? const Icon(Icons.check, size: 20)
           : IconButton(
-              tooltip: 'Добавить сразу',
+              tooltip: tr('Add now', 'Добавить сразу'),
               icon: const Icon(Icons.add_circle_outline),
               onPressed: () => _join([c.login, ...selected]),
             ),
