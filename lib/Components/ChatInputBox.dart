@@ -17,6 +17,7 @@ import 'UI/NetworkImageWrapper.dart';
 import 'WidgetTooltip.dart';
 import 'package:collection/collection.dart';
 import '/Components/UserPrefs.dart';
+import '/Pages/Account.dart';
 
 /// [ChatInputBox] is our widget that features the input field used for every channel. It's feature rich and even contains autocompletion features!
 class ChatInputBox extends StatefulWidget {
@@ -420,7 +421,22 @@ class ChatInputBoxState extends State<ChatInputBox> {
                     ],
                   ),
                 ),
-              ],
+              ] else
+                // DearKing mod: нет подключённого аккаунта — понятная полоска вместо пустоты
+                InkWell(
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AccountPage(client: widget.client!))),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    child: Row(
+                      children: [
+                        Icon(Icons.visibility_outlined, size: 18, color: Theme.of(context).hintColor),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(tr('Read-only — not logged in', 'Только чтение — вы не вошли'), style: TextStyle(color: Theme.of(context).hintColor))),
+                        Text(tr('Log in', 'Войти'), style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
               SizedBox(height: MediaQuery.paddingOf(context).bottom),
             ],
           ),

@@ -92,9 +92,28 @@ class AppearancePicker extends StatelessWidget {
                     for (final e in ThemeManager.colors.entries)
                       _Swatch(
                         color: e.value.first as Color,
-                        selected: e.key == accent,
-                        onTap: () => BlocProvider.of<ThemeBloc>(context).add(ThemeColorSchemeChanged(colorScheme: e.key)),
+                        // свой акцент из палитры перекрывает шаблоны
+                        selected: UserPrefs.instance.accent == null && e.key == accent,
+                        onTap: () {
+                          UserPrefs.instance.setAccent(null);
+                          BlocProvider.of<ThemeBloc>(context).add(ThemeColorSchemeChanged(colorScheme: e.key));
+                        },
                       ),
+                    // свой цвет акцента
+                    _PaletteSwatch(
+                      custom: UserPrefs.instance.accent,
+                      onTap: () async {
+                        final picked = await ColorPickerDialog.show(
+                          context,
+                          initial: UserPrefs.instance.accent ?? theme.colorScheme.primary,
+                          title: tr('Accent color', 'Цвет акцента'),
+                          sample: tr('Accent', 'Акцент'),
+                          allowReset: UserPrefs.instance.accent != null,
+                        );
+                        if (picked == null) return;
+                        await UserPrefs.instance.setAccent(picked == ColorPickerDialog.reset ? null : picked);
+                      },
+                    ),
                   ],
                 ),
               ],

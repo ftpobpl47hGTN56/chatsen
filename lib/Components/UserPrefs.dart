@@ -195,6 +195,22 @@ class UserPrefs extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Свой цвет акцента (из палитры) или null — используется шаблон из темы.
+  Color? get accent {
+    final v = _g<int?>('accentColor', null);
+    return v == null ? null : Color(v);
+  }
+
+  Future<void> setAccent(Color? c) async {
+    if (c == null) {
+      await _mod?.delete('accentColor');
+    } else {
+      await _mod?.put('accentColor', c.toARGB32());
+    }
+    appearance.value++;
+    notifyListeners();
+  }
+
   /// Цвет фона (ARGB) или null — стандартная тема.
   Color? get background {
     final v = _g<int?>('bgColor', null);

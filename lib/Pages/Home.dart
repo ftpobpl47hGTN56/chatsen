@@ -111,16 +111,33 @@ class _HomePageState extends State<HomePage> implements twitch.Listener {
     Future.delayed(Duration(seconds: 1)).then(
       (t) => BlocProvider.of<AccountsCubit>(context).getActive().then(
         (account) async {
-          if (account.token == null) return;
+          // DearKing mod: нет активного, но есть сохранённые аккаунты (например, после импорта) —
+          // берём первый и делаем активным, чтобы не остаться гостем без поля ввода
+          final cubit = BlocProvider.of<AccountsCubit>(context);
+          if (account.token == null) {
+            final withToken = cubit.state.where((a) => a.token != null).toList();
+            if (withToken.isEmpty) return;
+            account = withToken.first;
+            await cubit.setActive(account);
+          }
 
-          var response = await http.get(
-            Uri.parse('https://id.twitch.tv/oauth2/validate'),
-            headers: {
-              'Authorization': 'Bearer ${account.token}',
-            },
-          );
-          var jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
-          print(jsonResponse);
+          dynamic jsonResponse;
+          try {
+            var response = await http
+                .get(
+                  Uri.parse('https://id.twitch.tv/oauth2/validate'),
+                  headers: {
+                    'Authorization': 'Bearer ${account.token}',
+                  },
+                )
+                .timeout(const Duration(seconds: 10));
+            jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
+          } catch (_) {
+            // нет сети / VPN тормозит — подключаемся без проверки, а не остаёмся гостем
+            return client.swapCredentials(
+              twitch.Credentials(clientId: account.clientId, id: account.id, login: account.login!, token: account.token),
+            );
+          }
 
           if (jsonResponse['expires_in'] != null &&
               Duration(seconds: (jsonResponse['expires_in'] ?? -1)) <=
@@ -145,8 +162,10 @@ class _HomePageState extends State<HomePage> implements twitch.Listener {
           if (jsonResponse['expires_in'] == null ||
               (jsonResponse['expires_in'] ?? -1) < 0) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              // показываем дольше и с именем аккаунта — раньше это легко было пропустить
+              duration: const Duration(seconds: 12),
               content: Text(
-                  tr('Your login has expired! Please login again to refresh it.', 'Вход истёк! Войдите заново.')),
+                  tr('Login for ${account.login} has expired — you are in read-only mode. Log in again to chat.', 'Вход для ${account.login} истёк — вы в режиме только чтения. Войдите заново, чтобы писать.')),
               behavior: SnackBarBehavior.floating,
               action: SnackBarAction(
                 label: tr('Re-login', 'Войти заново'),

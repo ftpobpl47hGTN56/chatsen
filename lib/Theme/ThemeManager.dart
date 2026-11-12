@@ -39,10 +39,20 @@ class ThemeManager {
     Color(0xFFFFF59D), // жёлтый
   ];
 
+  /// Палитра оттенков из одного цвета — для своего акцента.
+  static MaterialColor swatchOf(Color c) {
+    final hsl = HSLColor.fromColor(c);
+    Color l(double d) => hsl.withLightness((hsl.lightness + d).clamp(0.0, 1.0)).toColor();
+    return MaterialColor(c.toARGB32(), {
+      50: l(0.40), 100: l(0.30), 200: l(0.20), 300: l(0.12), 400: l(0.06),
+      500: c, 600: l(-0.06), 700: l(-0.12), 800: l(-0.18), 900: l(-0.24),
+    });
+  }
+
   static Brightness brightnessOf(Color c) => c.computeLuminance() > 0.4 ? Brightness.light : Brightness.dark;
 
   static ThemeData buildTheme(Brightness brightness, String color,
-      {bool highContrast = false, Color? background, bool accentBorders = false}) {
+      {bool highContrast = false, Color? background, bool accentBorders = false, Color? accent}) {
     if (background != null) brightness = brightnessOf(background);
     var baseColorScheme = brightness == Brightness.light
         ? ColorScheme.light()
@@ -52,7 +62,7 @@ class ThemeManager {
         ? null
         : Color.lerp(background, brightness == Brightness.dark ? Colors.white : Colors.black, 0.07);
     var colorScheme = ColorScheme.fromSwatch(
-      primarySwatch: (colors[color] ?? colors['amber']!).first,
+      primarySwatch: accent != null ? swatchOf(accent) : (colors[color] ?? colors['amber']!).first,
       brightness: brightness,
       backgroundColor: background ??
           (brightness == Brightness.dark
@@ -96,7 +106,13 @@ class ThemeManager {
         bottomSheetTheme: themeData.bottomSheetTheme.copyWith(backgroundColor: step(0.08), modalBackgroundColor: step(0.08)),
         popupMenuTheme: themeData.popupMenuTheme.copyWith(color: step(0.12)),
         cardTheme: themeData.cardTheme.copyWith(color: step(0.09)),
-        snackBarTheme: themeData.snackBarTheme.copyWith(backgroundColor: step(0.18)),
+        // текст уведомлений — цветом акцента (раньше был тёмно-серым на сером, почти не видно)
+        snackBarTheme: themeData.snackBarTheme.copyWith(
+          backgroundColor: step(0.18),
+          contentTextStyle: TextStyle(color: colorScheme.primary, fontSize: 14, fontWeight: FontWeight.w500),
+          actionTextColor: colorScheme.primary,
+          closeIconColor: colorScheme.primary,
+        ),
       );
     }
     if (accentBorders) themeData = _withAccentBorders(themeData);

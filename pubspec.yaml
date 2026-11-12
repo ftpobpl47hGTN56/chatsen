@@ -50,7 +50,7 @@ flutter:
 
 flutter_icons:
   android: true
-  ios: true
+  ios: false # DearKing mod: iOS не собираем — иначе шаг иконок падает на отсутствующих файлах
   remove_alpha_ios: true
   image_path: "assets/logo.png"
   adaptive_icon_background: "assets/logo-background.png" # "#0F091E" # "#21123B" # "#262626"
