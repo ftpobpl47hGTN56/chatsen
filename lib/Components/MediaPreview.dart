@@ -71,6 +71,10 @@ class MediaResolver {
     if (ext == 'gifv') return ResolvedMedia(MediaKind.video, media: url.replaceFirst(RegExp(r'\.gifv', caseSensitive: false), '.mp4'));
     if (_videoExt.contains(ext)) return ResolvedMedia(MediaKind.video, media: url);
 
+    // DearKing mod: сайты-SPA без og-тегов (страница пустая без JavaScript) — прямые правила
+    final known = await _knownSite(u);
+    if (known != null) return known;
+
     final yt = _youtubeId(u);
     if (yt != null) {
       String? title;
@@ -119,6 +123,49 @@ class MediaResolver {
     } finally {
       client.close();
     }
+  }
+
+  static Future<ResolvedMedia?> _knownSite(Uri u) async {
+    final host = u.host.toLowerCase().replaceFirst('www.', '');
+    final seg = u.pathSegments.where((x) => x.isNotEmpty).toList();
+
+    // 7tv.app/emotes/<id> → сама картинка эмоута (анимированный WebP)
+    if ((host == '7tv.app' || host == 'old.7tv.app') && seg.length >= 2 && seg[0] == 'emotes') {
+      return ResolvedMedia(MediaKind.image, media: 'https://cdn.7tv.app/emote/${seg[1]}/4x.webp');
+    }
+    // betterttv.com/emotes/<id>
+    if (host == 'betterttv.com' && seg.length >= 2 && seg[0] == 'emotes') {
+      return ResolvedMedia(MediaKind.image, media: 'https://cdn.betterttv.net/emote/${seg[1]}/3x');
+    }
+    // frankerfacez.com/emoticon/<id>-<name>
+    if (host == 'frankerfacez.com' && seg.length >= 2 && seg[0] == 'emoticon') {
+      final id = seg[1].split('-').first;
+      if (int.tryParse(id) != null) return ResolvedMedia(MediaKind.image, media: 'https://cdn.frankerfacez.com/emote/$id/4');
+    }
+    // imgur.com/<id> (без расширения) → i.imgur.com/<id>.jpg (imgur сам отдаёт нужный формат)
+    if (host == 'imgur.com' && seg.length == 1 && RegExp(r'^[A-Za-z0-9]{5,8}$').hasMatch(seg[0])) {
+      return ResolvedMedia(MediaKind.image, media: 'https://i.imgur.com/${seg[0]}.jpg');
+    }
+    // x.com / twitter.com — через публичный API fxtwitter (картинки, GIF, видео)
+    if ((host == 'x.com' || host == 'twitter.com' || host == 'mobile.twitter.com') && seg.length >= 3 && seg[1] == 'status') {
+      try {
+        final r = await http.get(Uri.parse('https://api.fxtwitter.com/${seg[0]}/status/${seg[2]}'));
+        final t = jsonDecode(utf8.decode(r.bodyBytes))['tweet'];
+        final media = t?['media'];
+        final text = '${t?['author']?['name'] ?? seg[0]}: ${t?['text'] ?? ''}';
+        final videos = media?['videos'] as List?;
+        if (videos != null && videos.isNotEmpty) {
+          return ResolvedMedia(MediaKind.video, media: videos.first['url'], thumb: videos.first['thumbnail_url'], title: text, site: 'X');
+        }
+        final photos = media?['photos'] as List?;
+        if (photos != null && photos.isNotEmpty) return ResolvedMedia(MediaKind.image, media: photos.first['url']);
+        return ResolvedMedia(MediaKind.page, title: text, site: 'X');
+      } catch (_) {
+        return null;
+      }
+    }
+    // kick.com/<канал>/clips/... и прочее — пойдёт общим путём (og-теги)
+    return null;
   }
 
   static String _unescape(String s) => s

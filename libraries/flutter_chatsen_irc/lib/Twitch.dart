@@ -50,6 +50,10 @@ class Emote {
   final bool zeroWidth; // Flag set/Bitfield would be better, for chatsen2 Copesen
   final String? alt;
 
+  /// DearKing mod: категория и порядок внутри неё (для эмодзи — из emoji.json).
+  final String? category;
+  final int order;
+
   Emote({
     this.name,
     this.id,
@@ -58,7 +62,31 @@ class Emote {
     this.mipmap,
     this.zeroWidth = false,
     this.alt,
+    this.category,
+    this.order = 0,
   });
+
+  /// Порядок категорий эмодзи (как в emoji.json / Unicode).
+  static const emojiCategories = [
+    'Smileys & Emotion', 'People & Body', 'Animals & Nature', 'Food & Drink', 'Travel & Places',
+    'Activities', 'Objects', 'Symbols', 'Flags',
+  ];
+
+  /// 7TV-эмоут из объекта API (REST и события используют одинаковую структуру).
+  static Emote? from7TV(Map emoteData) {
+    final data = emoteData['data'];
+    final id = '${emoteData['id'] ?? data?['id'] ?? ''}';
+    List<String> mipmap;
+    if (data is Map && data['host'] is Map) {
+      final files = List<dynamic>.from(data['host']['files'] ?? const []).where((x) => '${x['format']}'.toUpperCase() == 'WEBP');
+      mipmap = [for (var f in files) 'https:${data['host']['url']}/${f['name']}'];
+    } else {
+      mipmap = id.isEmpty ? [] : [for (var x in ['1x', '2x', '3x', '4x']) 'https://cdn.7tv.app/emote/$id/$x.webp'];
+    }
+    if (mipmap.isEmpty) return null;
+    final flags = (data is Map ? data['flags'] : null) ?? 0;
+    return Emote(name: emoteData['name'], id: id, provider: '7TV', mipmap: mipmap, zeroWidth: (flags & (1 << 8)) == (1 << 8));
+  }
 }
 
 enum MessageTokenType {
@@ -614,27 +642,23 @@ class Channel {
       final responseJson = json.decode(utf8.decode(response.bodyBytes));
 
       for (var emoteData in responseJson['emote_set']['emotes'] ?? responseJson['emote_set']['emote']) {
-        final emoteUrls = List<dynamic>.from(emoteData['data']['host']['files']).where((x) => x['format'].toUpperCase() == 'WEBP');
-        if (emoteUrls.isEmpty) {
-          continue;
-        }
+        final emote = Emote.from7TV(emoteData);
+        if (emote != null) emotes.add(emote);
+      }
 
-        var emote = Emote(
-          name: emoteData['name'],
-          id: emoteData['id'],
-          provider: '7TV',
-          mipmap: [
-            for (var url in emoteUrls) 'https:${emoteData['data']['host']['url']}/${url['name']}',
-          ],
-          zeroWidth: (emoteData['data']['flags'] & (1 << 8)) == (1 << 8),
-        );
-
-        emotes.add(emote);
+      // DearKing mod: живые события 7TV — добавление/удаление/переименование эмоутов модераторами
+      final setId = responseJson['emote_set']?['id'];
+      if (setId is String && setId.isNotEmpty) {
+        sevenTvSetId = setId;
+        SevenTVEvents.instance.watch(this, setId);
       }
     } catch (e) {
       print("Couldn't fetch 7TV emotes");
     }
   }
+
+  /// DearKing mod: id набора 7TV-эмоутов канала (для подписки на события).
+  String? sevenTvSetId;
 
   Channel({
     this.client,
@@ -1127,8 +1151,10 @@ class Client {
       var response = await http.get(Uri.parse('https://raw.githubusercontent.com/iamcal/emoji-data/master/emoji.json'));
       var jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
 
-      for (var entry in jsonResponse.where((entry) => entry['has_img_twitter'] == true)) {
+      for (var entry in jsonResponse.where((entry) => entry['has_img_twitter'] == true && entry['category'] != 'Component')) {
         var emote = Emote(
+          category: entry['category'],
+          order: entry['sort_order'] ?? 0,
           alt: entry['unified'].split('-').map((x) => String.fromCharCode(int.parse(x, radix: 16))).join(),
           name: entry['short_name'],
           // id: emoteData['id'],
@@ -1145,6 +1171,11 @@ class Client {
 
         emojis.add(emote);
       }
+      // DearKing mod: как в стандартной клавиатуре — по категориям, внутри по sort_order
+      emojis.sort((a, b) {
+        final ca = Emote.emojiCategories.indexOf(a.category ?? ''), cb = Emote.emojiCategories.indexOf(b.category ?? '');
+        return ca != cb ? ca.compareTo(cb) : a.order.compareTo(b.order);
+      });
     } catch (e) {
       // print(e);
       print('Couldn\'t load emojis');
@@ -1375,6 +1406,7 @@ class Client {
 
   void partChannels(List<Channel> channelsToPart) async {
     for (var channelToLeave in channelsToPart) {
+      SevenTVEvents.instance.unwatch(channelToLeave);
       channelToLeave.receiver!.channelsToPart.add(channelToLeave.name);
       channels.remove(channelToLeave);
       // TODO: Kill connection if there are no channels left
@@ -1396,5 +1428,139 @@ class GQL {
       },
     );
     return jsonDecode(utf8.decode(request.bodyBytes));
+  }
+}
+
+
+/// DearKing mod: живые события 7TV (EventAPI v3). Одно соединение на всё приложение,
+/// подписка на emote_set.update для каждого открытого канала. При изменении набора
+/// эмоутов обновляет channel.emotes и добавляет в чат системную плашку.
+class SevenTVEvents {
+  SevenTVEvents._();
+  static final SevenTVEvents instance = SevenTVEvents._();
+
+  WebSocketChannel? _ws;
+  StreamSubscription? _sub;
+  Timer? _retry;
+  bool _connecting = false;
+  final Map<String, Channel> _bySet = {};
+
+  void watch(Channel channel, String setId) {
+    _bySet.removeWhere((k, v) => v == channel && k != setId);
+    final isNew = !_bySet.containsKey(setId);
+    _bySet[setId] = channel;
+    if (_ws == null) {
+      _connect();
+    } else if (isNew) {
+      _send(35, setId);
+    }
+  }
+
+  void unwatch(Channel channel) {
+    final ids = _bySet.entries.where((e) => e.value == channel).map((e) => e.key).toList();
+    for (final id in ids) {
+      _bySet.remove(id);
+      _send(36, id);
+    }
+  }
+
+  void _send(int op, String setId) {
+    try {
+      _ws?.sink.add(jsonEncode({
+        'op': op,
+        'd': {
+          'type': 'emote_set.update',
+          'condition': {'object_id': setId},
+        },
+      }));
+    } catch (_) {}
+  }
+
+  void _connect() {
+    if (_connecting || _bySet.isEmpty) return;
+    _connecting = true;
+    try {
+      final ws = WebSocketChannel.connect(Uri.parse('wss://events.7tv.io/v3'));
+      _ws = ws;
+      _sub = ws.stream.listen(
+        (raw) {
+          try {
+            final msg = jsonDecode('$raw');
+            switch (msg['op']) {
+              case 1: // hello — подписываемся на все открытые каналы
+                _connecting = false;
+                for (final id in _bySet.keys) {
+                  _send(35, id);
+                }
+                break;
+              case 0: // dispatch
+                _handle(msg['d']);
+                break;
+              case 7: // end of stream / reconnect
+                _drop();
+                break;
+            }
+          } catch (_) {}
+        },
+        onError: (_) => _drop(),
+        onDone: _drop,
+        cancelOnError: true,
+      );
+    } catch (_) {
+      _drop();
+    }
+  }
+
+  void _drop() {
+    _connecting = false;
+    _sub?.cancel();
+    _sub = null;
+    try {
+      _ws?.sink.close();
+    } catch (_) {}
+    _ws = null;
+    _retry?.cancel();
+    if (_bySet.isNotEmpty) _retry = Timer(const Duration(seconds: 10), _connect);
+  }
+
+  void _handle(dynamic d) {
+    if (d is! Map || d['type'] != 'emote_set.update') return;
+    final body = d['body'];
+    if (body is! Map) return;
+    final channel = _bySet['${body['id']}'];
+    if (channel == null) return;
+    final actor = body['actor']?['display_name'] ?? body['actor']?['username'] ?? '7TV';
+
+    for (final p in (body['pushed'] as List? ?? const [])) {
+      if (p['key'] != 'emotes' || p['value'] is! Map) continue;
+      final emote = Emote.from7TV(p['value']);
+      if (emote == null) continue;
+      channel.emotes.removeWhere((e) => e.provider == '7TV' && e.id == emote.id);
+      channel.emotes.add(emote); // сначала эмоут — тогда в плашке он сразу отрисуется картинкой
+      _notify(channel, ircTr('$actor added 7TV emote ${emote.name}', '$actor добавил 7TV-эмоут ${emote.name}'));
+    }
+    for (final p in (body['pulled'] as List? ?? const [])) {
+      if (p['key'] != 'emotes' || p['old_value'] is! Map) continue;
+      final old = p['old_value'];
+      final name = '${old['name']}';
+      channel.emotes.removeWhere((e) => e.provider == '7TV' && (e.id == '${old['id']}' || e.name == name));
+      _notify(channel, ircTr('$actor removed 7TV emote $name', '$actor удалил 7TV-эмоут $name'));
+    }
+    for (final p in (body['updated'] as List? ?? const [])) {
+      if (p['key'] != 'emotes' || p['value'] is! Map || p['old_value'] is! Map) continue;
+      final oldName = '${p['old_value']['name']}';
+      final emote = Emote.from7TV(p['value']);
+      if (emote == null) continue;
+      channel.emotes.removeWhere((e) => e.provider == '7TV' && (e.id == emote.id || e.name == oldName));
+      channel.emotes.add(emote);
+      _notify(channel, ircTr('$actor renamed 7TV emote $oldName → ${emote.name}', '$actor переименовал 7TV-эмоут $oldName → ${emote.name}'));
+    }
+  }
+
+  void _notify(Channel channel, String text) {
+    final message = Message(channel: channel, body: text, dateTime: DateTime.now());
+    channel.messages.add(message);
+    ircTrim(channel.messages);
+    channel.client?.listeners.forEach((listener) => listener.onMessage(channel, message));
   }
 }

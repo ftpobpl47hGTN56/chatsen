@@ -195,6 +195,18 @@ class UserPrefs extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Свёрнутые группы в окне эмоутов (ключи вида «tab:группа»).
+  Set<String> get pickerCollapsed {
+    final v = _mod?.get('pickerCollapsed');
+    return v is List ? v.map((e) => '$e').toSet() : <String>{};
+  }
+
+  Future<void> togglePickerGroup(String key) async {
+    final set = pickerCollapsed;
+    if (!set.remove(key)) set.add(key);
+    await _mod?.put('pickerCollapsed', set.toList());
+  }
+
   /// Свой цвет акцента (из палитры) или null — используется шаблон из темы.
   Color? get accent {
     final v = _g<int?>('accentColor', null);

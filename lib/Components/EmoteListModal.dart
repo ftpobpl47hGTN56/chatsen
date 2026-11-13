@@ -1,16 +1,19 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import '/Components/WidgetTooltip.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import '../Consts.dart';
-import '/Components/UI/WidgetBlur.dart';
 import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
-import 'package:hive/hive.dart';
 
-import 'UI/NetworkImageWrapper.dart';
+import '../Consts.dart';
+import '/Components/EmotePopup.dart';
+import '/Components/UI/WidgetBlur.dart';
 import '/Components/UserPrefs.dart';
 
-/// [EmoteListModal] is our modal view/widget designed to add and join new channels to the client.
+/// Окно эмоутов (DearKing mod).
+///
+/// Раньше группы рисовались через GridView(shrinkWrap) внутри ListView — это создаёт и грузит
+/// ВСЕ эмоуты канала сразу (сотни картинок в 4x), отсюда тормоза при открытии.
+/// Теперь: ленивые слайверы (рисуются только видимые), картинки 2x с декодированием до 64 px,
+/// сворачиваемые группы с запоминанием, кнопки ▲▼ для листания.
 class EmoteListModal extends StatefulWidget {
   final twitch.Client? client;
   final twitch.Channel? channel;
@@ -27,20 +30,49 @@ class EmoteListModal extends StatefulWidget {
   _EmoteListModalState createState() => _EmoteListModalState();
 }
 
-class _EmoteListModalState extends State<EmoteListModal> {
-  TextEditingController? textEditingController;
+class _Section {
+  final String key;
+  final String title;
+  final List<twitch.Emote> emotes;
+  const _Section(this.key, this.title, this.emotes);
+}
 
-  @override
-  void initState() {
-    textEditingController = TextEditingController();
-    super.initState();
-  }
+class _EmoteListModalState extends State<EmoteListModal> {
+  final textEditingController = TextEditingController();
+
+  String get query => textEditingController.text.trim().toLowerCase();
 
   @override
   void dispose() {
-    textEditingController!.dispose();
+    textEditingController.dispose();
     super.dispose();
   }
+
+  bool _match(twitch.Emote e) => query.isEmpty || (e.name ?? '').toLowerCase().contains(query);
+
+  List<_Section> _byProvider(String tab, List<twitch.Emote> emotes) => [
+        for (final g in groupBy(emotes, (twitch.Emote e) => e.provider ?? '?').entries) _Section('$tab:${g.key}', g.key, g.value),
+      ];
+
+  static String _emojiTitle(String c) {
+    const ru = {
+      'Smileys & Emotion': 'Смайлы и эмоции',
+      'People & Body': 'Люди и тело',
+      'Animals & Nature': 'Животные и природа',
+      'Food & Drink': 'Еда и напитки',
+      'Travel & Places': 'Путешествия и места',
+      'Activities': 'Занятия',
+      'Objects': 'Предметы',
+      'Symbols': 'Символы',
+      'Flags': 'Флаги',
+    };
+    return tr(c, ru[c] ?? c);
+  }
+
+  List<_Section> _emojiSections() => [
+        for (final g in groupBy(widget.client!.emojis, (twitch.Emote e) => e.category ?? 'Other').entries)
+          _Section('emoji:${g.key}', _emojiTitle(g.key), g.value),
+      ];
 
   @override
   Widget build(BuildContext context) => DefaultTabController(
@@ -57,8 +89,8 @@ class _EmoteListModalState extends State<EmoteListModal> {
                     padding: const EdgeInsets.all(8.0),
                     child: Container(width: 32.0, height: 2.0, color: Theme.of(context).dividerColor),
                   ),
-                  Container(
-                    height: MediaQuery.sizeOf(context).height / 3.0,
+                  SizedBox(
+                    height: MediaQuery.sizeOf(context).height / 2.6,
                     child: Column(
                       children: [
                         SizedBox(
@@ -67,7 +99,7 @@ class _EmoteListModalState extends State<EmoteListModal> {
                             indicatorPadding: EdgeInsets.zero,
                             tabs: [
                               if (!kUnverifiedVersion) Tab(text: tr('Channel', 'Канал')),
-                              if (!kUnverifiedVersion) Tab(text: 'Twitch'),
+                              if (!kUnverifiedVersion) const Tab(text: 'Twitch'),
                               if (!kUnverifiedVersion) Tab(text: tr('Global', 'Глобальные')),
                               Tab(text: tr('Emojis', 'Эмодзи')),
                             ],
@@ -76,69 +108,29 @@ class _EmoteListModalState extends State<EmoteListModal> {
                         Expanded(
                           child: TabBarView(
                             children: [
+                              if (!kUnverifiedVersion) _EmoteSections(sections: _byProvider('channel', widget.channel!.emotes), match: _match, query: query, onPick: _pick, onLongPress: _info),
                               if (!kUnverifiedVersion)
-                                ListView(
-                                  children: [
-                                    for (var group in groupBy(widget.channel!.emotes, (dynamic emote) => emote.provider).entries) ...[
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-                                        child: Text('${group.key}', style: Theme.of(context).textTheme.titleLarge),
-                                      ),
-                                      GridView.extent(
-                                        maxCrossAxisExtent: 48.0,
-                                        physics: NeverScrollableScrollPhysics(),
-                                        shrinkWrap: true,
-                                        children: [
-                                          for (var emote in group.value.where((x) => x.name!.toLowerCase().contains(textEditingController!.text.toLowerCase()))) buildEmoteButton(emote),
-                                        ],
-                                      ),
-                                    ],
-                                  ],
+                                _EmoteSections(
+                                  sections: [_Section('twitch:all', 'Twitch', widget.channel?.transmitter?.emotes ?? const [])],
+                                  match: _match,
+                                  query: query,
+                                  onPick: _pick,
+                                  onLongPress: _info,
                                 ),
-                              if (!kUnverifiedVersion)
-                                GridView.extent(
-                                  maxCrossAxisExtent: 48.0,
-                                  children: [
-                                    for (var emote in widget.channel!.transmitter!.emotes.where((x) => x.name!.toLowerCase().contains(textEditingController!.text.toLowerCase()))) buildEmoteButton(emote),
-                                  ],
-                                ),
-                              if (!kUnverifiedVersion)
-                                ListView(
-                                  children: [
-                                    for (var group in groupBy(widget.client!.emotes, (dynamic emote) => emote.provider).entries) ...[
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 16.0, right: 8.0, left: 8.0),
-                                        child: Text('${group.key}', style: Theme.of(context).textTheme.titleLarge),
-                                      ),
-                                      GridView.extent(
-                                        maxCrossAxisExtent: 48.0,
-                                        physics: NeverScrollableScrollPhysics(),
-                                        shrinkWrap: true,
-                                        children: [
-                                          for (var emote in group.value.where((x) => x.name!.toLowerCase().contains(textEditingController!.text.toLowerCase()))) buildEmoteButton(emote),
-                                        ],
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              GridView.extent(
-                                maxCrossAxisExtent: 48.0,
-                                children: [
-                                  for (var emote in widget.client!.emojis.where((x) => x.name!.toLowerCase().contains(textEditingController!.text.toLowerCase()))) buildEmoteButton(emote),
-                                ],
-                              ),
+                              if (!kUnverifiedVersion) _EmoteSections(sections: _byProvider('global', widget.client!.emotes), match: _match, query: query, onPick: _pick, onLongPress: _info),
+                              _EmoteSections(sections: _emojiSections(), match: _match, query: query, onPick: _pick, onLongPress: _info),
                             ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Container(
+                  SizedBox(
                     height: 48.0,
                     child: Row(
                       children: [
                         IconButton(
-                          icon: Icon(Icons.search),
+                          icon: const Icon(Icons.search),
                           onPressed: () => setState(() {}),
                           enableFeedback: false,
                         ),
@@ -152,18 +144,18 @@ class _EmoteListModalState extends State<EmoteListModal> {
                               hintText: tr('Search emotes', 'Поиск эмоутов'),
                               border: InputBorder.none,
                             ),
-                            onChanged: (text) async => setState(() {}),
+                            onChanged: (text) => setState(() {}),
                           ),
                         ),
                         IconButton(
-                          icon: Icon(Icons.refresh),
+                          icon: const Icon(Icons.refresh),
                           onPressed: () async {
                             await widget.client?.updateEmotes();
                             await widget.client?.updateBadges();
                             await widget.channel?.updateEmotes();
                             await widget.channel?.updateBadges();
                             await widget.channel?.transmitter?.updateUserEmotes();
-                            setState(() {});
+                            if (mounted) setState(() {});
                           },
                           tooltip: tr('Refresh emotes', 'Обновить эмоуты'),
                         ),
@@ -178,34 +170,129 @@ class _EmoteListModalState extends State<EmoteListModal> {
         }),
       );
 
-  WidgetTooltip buildEmoteButton(twitch.Emote emote) {
-    return WidgetTooltip(
-      // message: '${emote.name}',
-      message: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4.0),
-              child: NetworkImageW(
-                emote.mipmap!.last!,
-                height: 96.0,
-                fit: BoxFit.fitHeight,
-              ),
+  void _pick(twitch.Emote e) => widget.insertEmote(e.alt ?? e.name);
+
+  void _info(twitch.Emote e) => EmotePopup.show(context, emotes: [e], channel: widget.channel);
+}
+
+/// Список групп эмоутов: ленивые сетки, сворачиваемые заголовки, кнопки ▲▼.
+class _EmoteSections extends StatefulWidget {
+  final List<_Section> sections;
+  final bool Function(twitch.Emote) match;
+  final String query;
+  final void Function(twitch.Emote) onPick;
+  final void Function(twitch.Emote) onLongPress;
+
+  const _EmoteSections({required this.sections, required this.match, required this.query, required this.onPick, required this.onLongPress});
+
+  @override
+  State<_EmoteSections> createState() => _EmoteSectionsState();
+}
+
+class _EmoteSectionsState extends State<_EmoteSections> with AutomaticKeepAliveClientMixin {
+  final controller = ScrollController();
+  late Set<String> collapsed = UserPrefs.instance.pickerCollapsed;
+
+  @override
+  bool get wantKeepAlive => true; // вкладка не пересоздаётся при переключении
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  void _page(int dir) {
+    if (!controller.hasClients) return;
+    final p = controller.position;
+    final target = (p.pixels + dir * p.viewportDimension * 0.85).clamp(p.minScrollExtent, p.maxScrollExtent);
+    controller.animateTo(target, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+  }
+
+  /// 2x вместо 4x: в сетке 48 px больше не нужно.
+  static String _thumbUrl(twitch.Emote e) {
+    final m = e.mipmap ?? const [];
+    if (m.isEmpty) return '';
+    return (m.length >= 2 ? m[1] : m.first) ?? '';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    final theme = Theme.of(context);
+    final searching = widget.query.isNotEmpty;
+    final slivers = <Widget>[];
+    for (final section in widget.sections) {
+      final items = section.emotes.where(widget.match).toList();
+      if (items.isEmpty) continue;
+      final isCollapsed = !searching && collapsed.contains(section.key);
+      slivers.add(SliverToBoxAdapter(
+        child: InkWell(
+          onTap: () async {
+            await UserPrefs.instance.togglePickerGroup(section.key);
+            setState(() => collapsed = UserPrefs.instance.pickerCollapsed);
+          },
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 8, 6),
+            child: Row(
+              children: [
+                Expanded(child: Text(section.title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold))),
+                Text('${items.length}', style: theme.textTheme.bodySmall),
+                Icon(isCollapsed ? Icons.expand_more : Icons.expand_less, color: theme.colorScheme.primary),
+              ],
             ),
-            Text(emote.name!),
-            Text(emote.provider!),
+          ),
+        ),
+      ));
+      if (!isCollapsed) {
+        slivers.add(SliverGrid(
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 48.0),
+          delegate: SliverChildBuilderDelegate(
+            (context, i) {
+              final e = items[i];
+              final url = _thumbUrl(e);
+              return InkWell(
+                onTap: () => widget.onPick(e),
+                onLongPress: () => widget.onLongPress(e),
+                child: Padding(
+                  padding: const EdgeInsets.all(6.0),
+                  child: url.isEmpty
+                      ? Center(child: Text(e.alt ?? e.name ?? '', style: const TextStyle(fontSize: 22)))
+                      : Image(
+                          image: ResizeImage(CachedNetworkImageProvider(url), height: 64, allowUpscaling: false, policy: ResizeImagePolicy.fit),
+                          fit: BoxFit.contain,
+                          gaplessPlayback: true,
+                          errorBuilder: (_, __, ___) => Center(child: Text(e.alt ?? '?', style: const TextStyle(fontSize: 18))),
+                        ),
+                ),
+              );
+            },
+            childCount: items.length,
+          ),
+        ));
+      }
+    }
+    if (slivers.isEmpty) {
+      return Center(child: Text(tr('Nothing found', 'Ничего не найдено'), style: TextStyle(color: theme.hintColor)));
+    }
+    return Row(
+      children: [
+        Expanded(
+          child: CustomScrollView(
+            controller: controller,
+            cacheExtent: 200, // небольшой запас — не грузим всё сразу
+            slivers: slivers,
+          ),
+        ),
+        // кнопки листания
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(visualDensity: VisualDensity.compact, icon: const Icon(Icons.keyboard_arrow_up), tooltip: tr('Page up', 'Вверх'), onPressed: () => _page(-1)),
+            IconButton(visualDensity: VisualDensity.compact, icon: const Icon(Icons.keyboard_arrow_down), tooltip: tr('Page down', 'Вниз'), onPressed: () => _page(1)),
           ],
         ),
-      ),
-      child: InkWell(
-        onTap: () => widget.insertEmote((emote.alt ?? emote.name)),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: NetworkImageW(emote.mipmap!.last!),
-        ),
-      ),
+      ],
     );
   }
 }
