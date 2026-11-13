@@ -254,6 +254,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 // for (var i = 0; i < 10; ++i)
                 SettingsEntry(
                   category: tr('Message', 'Сообщения'),
+                  title: tr('Chat font size', 'Размер шрифта чата'),
+                  description: tr('Size of nicknames and message text, also the viewer list', 'Размер ников и текста сообщений, а также списка зрителей'),
+                  builder: (context, category, title, description) => const FontSizePicker(),
+                ),
+                SettingsEntry(
+                  category: tr('Message', 'Сообщения'),
                   title: tr('Mention style', 'Стиль упоминаний'),
                   description: tr('Font, color, background, outline of @mentions', 'Шрифт, цвет, фон и рамка @упоминаний'),
                   builder: (context, category, title, description) => const MentionStylePicker(),

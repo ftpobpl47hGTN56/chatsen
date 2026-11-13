@@ -339,6 +339,75 @@ class PanelSwitches extends StatelessWidget {
 }
 
 /// Стиль @упоминаний: варианты с живым превью.
+/// Размер шрифта чата: ползунок + живое превью (ник и текст сообщения, список зрителей).
+class FontSizePicker extends StatelessWidget {
+  const FontSizePicker({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: UserPrefs.instance,
+        builder: (context, _) {
+          final theme = Theme.of(context);
+          final size = UserPrefs.instance.chatFontSize;
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Expanded(child: Text(tr('Chat font size', 'Размер шрифта чата'), style: theme.textTheme.titleMedium)),
+                  Text('${size.round()} px', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+                ]),
+                Row(children: [
+                  IconButton(
+                    icon: const Icon(Icons.text_decrease),
+                    tooltip: tr('Smaller', 'Меньше'),
+                    onPressed: size > UserPrefs.minFont ? () => UserPrefs.instance.setChatFontSize(size - 1) : null,
+                  ),
+                  Expanded(
+                    child: Slider(
+                      value: size,
+                      min: UserPrefs.minFont,
+                      max: UserPrefs.maxFont,
+                      divisions: (UserPrefs.maxFont - UserPrefs.minFont).round(),
+                      label: '${size.round()}',
+                      onChanged: (v) => UserPrefs.instance.setChatFontSize(v.roundToDouble()),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.text_increase),
+                    tooltip: tr('Bigger', 'Больше'),
+                    onPressed: size < UserPrefs.maxFont ? () => UserPrefs.instance.setChatFontSize(size + 1) : null,
+                  ),
+                ]),
+                // превью строки чата
+                Text.rich(
+                  TextSpan(children: [
+                    const TextSpan(text: 'DearKing: ', style: TextStyle(color: Color(0xFF8A2BE2), fontWeight: FontWeight.bold)),
+                    TextSpan(text: tr('this is how chat looks', 'так будет выглядеть чат')),
+                  ]),
+                  style: TextStyle(fontSize: size),
+                ),
+                const SizedBox(height: 4),
+                Row(children: [
+                  Expanded(
+                    child: Text(
+                      tr('Also applies to the viewer list (a bit larger there)', 'Применяется и к списку зрителей (там чуть крупнее)'),
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: size != 14 ? () => UserPrefs.instance.setChatFontSize(14) : null,
+                    child: Text(tr('Reset', 'Сбросить')),
+                  ),
+                ]),
+              ],
+            ),
+          );
+        },
+      );
+}
+
 class MentionStylePicker extends StatelessWidget {
   const MentionStylePicker({Key? key}) : super(key: key);
 

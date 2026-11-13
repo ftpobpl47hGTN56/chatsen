@@ -166,7 +166,7 @@ class ChatMessage extends StatelessWidget {
                 ]),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor, fontSize: UserPrefs.instance.chatFontSize - 2),
               ),
             ),
           ],
@@ -175,8 +175,11 @@ class ChatMessage extends StatelessWidget {
     );
   }
 
-  Color getUserColor(BuildContext context, Color color) {
-    switch (Theme.of(context).brightness) {
+  Color getUserColor(BuildContext context, Color color) => readable(Theme.of(context).brightness, color);
+
+  /// Цвет ника, подогнанный под тему (тёмная — светлее, светлая — темнее), чтобы читался.
+  static Color readable(Brightness brightness, Color color) {
+    switch (brightness) {
       case Brightness.dark:
         final hsl = HSLColor.fromColor(Color(color.value == 0xFF000000 ? 0xFF010101 : color.value));
         return hsl.withLightness(hsl.lightness.clamp(0.6, 1.0)).toColor();
@@ -706,6 +709,8 @@ class ChatMessage extends StatelessWidget {
                     ] +
                     spans,
               ),
+              // размер шрифта из настроек (эмоуты — WidgetSpan, их размер не меняется)
+              style: TextStyle(fontSize: UserPrefs.instance.chatFontSize),
             ),
                 for (final url in previews) MediaPreview(key: ValueKey(url), url: url),
                 // у сообщения есть ответы — кнопка «💬 N ответов» открывает ветку

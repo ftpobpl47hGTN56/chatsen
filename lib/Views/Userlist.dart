@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '/Components/ChatMessage.dart';
 import '/Components/UserCard.dart';
 import '/Components/UserPrefs.dart';
 import 'package:flutter_chatsen_irc/Twitch.dart' as twitch;
@@ -41,6 +42,20 @@ class _UserlistViewState extends State<UserlistView> {
         builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
           if (snapshot.hasData) {
             var userlistWidgets = <Widget>[];
+            final theme = Theme.of(context);
+            final fontSize = UserPrefs.instance.chatFontSize + 3; // в списке чуть крупнее, чем в чате
+            // цвет ника из последних сообщений канала (один проход по списку)
+            final seen = <String, String?>{};
+            for (final m in widget.channel!.messages.reversed) {
+              final login = m.user?.login?.toLowerCase();
+              if (login != null && !seen.containsKey(login)) seen[login] = m.user?.color;
+            }
+            Color colorOf(String user) => ChatMessage.readable(
+                  theme.brightness,
+                  UserPrefs.instance.userColor(user) ?? ChatMessage.nickColor(seen[user.toLowerCase()], user),
+                );
+            // полупрозрачная обводка: на тёмной теме — тёмная, на светлой — светлая
+            final outline = theme.brightness == Brightness.dark ? Colors.black.withAlpha(130) : Colors.white.withAlpha(170);
             for (var group in widget.channel!.users.entries) {
               if (group.value.isEmpty || !group.value.any((x) => x.toLowerCase().contains(tec.text.toLowerCase()))) continue;
 
@@ -65,10 +80,14 @@ class _UserlistViewState extends State<UserlistView> {
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text(tr('Username \'$user\' copied', 'Ник «$user» скопирован'))));
                     },
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
-                      child: Text(
-                        UserPrefs.instance.aliasOf(user) != null ? '${UserPrefs.instance.aliasOf(user)} ($user)' : user,
-                        style: UserPrefs.instance.isIgnored(user) ? TextStyle(color: Theme.of(context).disabledColor, fontStyle: FontStyle.italic) : null,
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 5.0),
+                      child: _OutlinedNick(
+                        name: UserPrefs.instance.aliasOf(user) ?? user,
+                        login: UserPrefs.instance.aliasOf(user) != null ? user : null,
+                        fontSize: fontSize,
+                        color: UserPrefs.instance.isIgnored(user) ? theme.disabledColor : colorOf(user),
+                        outline: outline,
+                        italic: UserPrefs.instance.isIgnored(user),
                       ),
                     ),
                   ),
@@ -104,4 +123,49 @@ class _UserlistViewState extends State<UserlistView> {
           return Center(child: CircularProgressIndicator.adaptive());
         },
       );
+}
+
+/// Ник в списке зрителей: свой цвет + полупрозрачная обводка (два слоя текста).
+class _OutlinedNick extends StatelessWidget {
+  final String name;
+  final String? login; // оригинальный логин, если показан псевдоним
+  final double fontSize;
+  final Color color;
+  final Color outline;
+  final bool italic;
+
+  const _OutlinedNick({required this.name, this.login, required this.fontSize, required this.color, required this.outline, this.italic = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final base = TextStyle(
+      fontSize: fontSize,
+      fontWeight: FontWeight.w800,
+      letterSpacing: 0.3,
+      fontStyle: italic ? FontStyle.italic : FontStyle.normal,
+    );
+    final stroke = base.copyWith(
+      foreground: Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = (fontSize / 6).clamp(2.0, 4.5)
+        ..strokeJoin = StrokeJoin.round
+        ..color = outline,
+    );
+    final suffix = login != null ? '  ($login)' : '';
+    final suffixStyle = TextStyle(fontSize: fontSize * 0.7, fontWeight: FontWeight.w500, color: Theme.of(context).hintColor);
+    // нижний слой — обводка, верхний — цветной ник (+ логин, если показан псевдоним)
+    return Stack(
+      children: [
+        Text(name, style: stroke, maxLines: 1, overflow: TextOverflow.clip),
+        Text.rich(
+          TextSpan(children: [
+            TextSpan(text: name, style: base.copyWith(color: color)),
+            if (suffix.isNotEmpty) TextSpan(text: suffix, style: suffixStyle),
+          ]),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
 }

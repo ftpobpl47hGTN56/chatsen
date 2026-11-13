@@ -49,6 +49,18 @@ class UserPrefs extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Размер шрифта чата (ник + текст), px. Применяется и к списку зрителей.
+  static const double minFont = 10, maxFont = 28;
+  double get chatFontSize {
+    final v = _g<num>('chatFontSize', 14);
+    return v.toDouble().clamp(minFont, maxFont);
+  }
+
+  Future<void> setChatFontSize(double v) async {
+    await _mod?.put('chatFontSize', v.clamp(minFont, maxFont));
+    notifyListeners();
+  }
+
   /// Рамка 2px цвета акцента у кнопок и окон.
   bool get accentBorders => _g<bool>('accentBorders', false);
   Future<void> setAccentBorders(bool v) async {
